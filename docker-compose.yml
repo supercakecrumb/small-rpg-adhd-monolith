@@ -2,22 +2,20 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 
     ports:
-      - "8080:8080"
+      - "8765:8765"
     environment:
-      - PORT=8080
-      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - PORT=8765
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-productionasdfasdfasdfasdf}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:8230362621:AAEruFK_-A39gg_vXYAf6R1OeFMImmk3qYU}
       - DB_PATH=/app/data/small-rpg.db
     volumes:
       # Persist SQLite database
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8765/"]
       interval: 30s
       timeout: 10s
       retries: 3
