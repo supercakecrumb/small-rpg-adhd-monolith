@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Development
+.env
+*.db
+server
+
+# CI/CD
+.github
+
+# Documentation
+README.md
+ARCHITECTURE.md
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.log
+data/

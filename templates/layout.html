@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Small RPG - ADHD Friendly</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon_io/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon_io/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon_io/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon_io/apple-touch-icon.png">
+    <link rel="manifest" href="/static/favicon_io/site.webmanifest">
+    
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🎮 Small RPG</h1>
+            {{if .Username}}
+            <div class="nav-links">
+                <span class="username">👤 {{.Username}}</span>
+                <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+                <a href="/logout" class="btn btn-outline">Logout</a>
+            </div>
+            {{end}}
+        </div>
+    </nav>
+
+    <main class="container">
+        {{template "content" .}}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Made with ❤️ for ADHD brains</p>
+        </div>
+    </footer>
+</body>
+</html>

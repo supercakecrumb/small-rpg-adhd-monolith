@@ -1,0 +1,162 @@
+{{define "content"}}
+<div class="group-view">
+    <div class="page-header">
+        <div>
+            <h2>{{.Group.Name}}</h2>
+            <p class="text-muted">Invite Code: <code>{{.Group.InviteCode}}</code></p>
+        </div>
+        <div class="balance-display">
+            <span class="balance-label">Your Balance:</span>
+            <span class="balance-amount">🪙 {{.Balance}} coins</span>
+        </div>
+    </div>
+
+    {{if .Success}}
+    <div class="alert alert-success">{{.Success}}</div>
+    {{end}}
+
+    {{if .Error}}
+    <div class="alert alert-error">{{.Error}}</div>
+    {{end}}
+
+    <div class="group-content">
+        <!-- Tasks Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>✅ Tasks</h3>
+                <button onclick="toggleForm('task-form')" class="btn btn-sm btn-secondary">+ Add Task</button>
+            </div>
+
+            <div id="task-form" class="form-section" style="display: none;">
+                <form method="POST" action="/groups/{{.Group.ID}}/tasks/create" class="form">
+                    <div class="form-group">
+                        <label for="task_title">Title</label>
+                        <input type="text" id="task_title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="task_description">Description</label>
+                        <textarea id="task_description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task_type">Type</label>
+                            <select id="task_type" name="task_type" required onchange="toggleQuantity(this)">
+                                <option value="boolean">One-time (Boolean)</option>
+                                <option value="integer">Countable (Integer)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reward_value">Reward (coins)</label>
+                            <input type="number" id="reward_value" name="reward_value" min="1" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Task</button>
+                </form>
+            </div>
+
+            {{if .Tasks}}
+            <div class="tasks-list">
+                {{range .Tasks}}
+                <div class="task-item">
+                    <div class="task-info">
+                        <h4>{{.Title}}</h4>
+                        {{if .Description}}
+                        <p class="text-muted">{{.Description}}</p>
+                        {{end}}
+                        <span class="badge badge-reward">🪙 {{.RewardValue}} coins{{if eq .TaskType "integer"}} per unit{{end}}</span>
+                        <span class="badge badge-type">{{.TaskType}}</span>
+                    </div>
+                    <form method="POST" action="/tasks/{{.ID}}/complete" class="task-complete-form">
+                        {{if eq .TaskType "integer"}}
+                        <input type="number" name="quantity" min="1" placeholder="Qty" class="quantity-input" required>
+                        {{end}}
+                        <button type="submit" class="btn btn-success btn-sm">✓ Complete</button>
+                    </form>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <p class="empty-state">No tasks yet. Add one to get started!</p>
+            {{end}}
+        </div>
+
+        <!-- Shop Section -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🛍️ Shop</h3>
+                <button onclick="toggleForm('shop-form')" class="btn btn-sm btn-secondary">+ Add Item</button>
+            </div>
+
+            <div id="shop-form" class="form-section" style="display: none;">
+                <form method="POST" action="/groups/{{.Group.ID}}/shop/create" class="form">
+                    <div class="form-group">
+                        <label for="shop_title">Title</label>
+                        <input type="text" id="shop_title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shop_description">Description</label>
+                        <textarea id="shop_description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost">Cost (coins)</label>
+                        <input type="number" id="cost" name="cost" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Item</button>
+                </form>
+            </div>
+
+            {{if .ShopItems}}
+            <div class="shop-grid">
+                {{range .ShopItems}}
+                <div class="shop-item">
+                    <h4>{{.Title}}</h4>
+                    {{if .Description}}
+                    <p class="text-muted">{{.Description}}</p>
+                    {{end}}
+                    <div class="shop-item-footer">
+                        <span class="price">🪙 {{.Cost}}</span>
+                        <form method="POST" action="/shop/{{.ID}}/buy" style="display: inline;">
+                            <button type="submit" class="btn btn-primary btn-sm">Buy</button>
+                        </form>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <p class="empty-state">No items in shop yet. Add some rewards!</p>
+            {{end}}
+        </div>
+
+        <!-- Members Section -->
+        <div class="card">
+            <h3>👥 Members</h3>
+            {{if .Members}}
+            <div class="members-list">
+                {{range .Members}}
+                <div class="member-item">
+                    <span>{{.Username}}</span>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <p class="empty-state">No members yet.</p>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="/dashboard" class="btn btn-outline">← Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+function toggleForm(formId) {
+    const form = document.getElementById(formId);
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleQuantity(select) {
+    // This would be used if we had more complex UI needs
+}
+</script>
+{{end}}

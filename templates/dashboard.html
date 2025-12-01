@@ -1,0 +1,54 @@
+{{define "content"}}
+<div class="dashboard">
+    <div class="page-header">
+        <h2>👋 Welcome, {{.Username}}!</h2>
+    </div>
+
+    {{if .Error}}
+    <div class="alert alert-error">{{.Error}}</div>
+    {{end}}
+
+    <div class="card">
+        <h3>Your Groups</h3>
+        
+        {{if .Groups}}
+        <div class="groups-grid">
+            {{range .Groups}}
+            <a href="/groups/{{.ID}}" class="group-card">
+                <h4>{{.Name}}</h4>
+                <p class="text-muted">Invite Code: <code>{{.InviteCode}}</code></p>
+            </a>
+            {{end}}
+        </div>
+        {{else}}
+        <p class="empty-state">You're not in any groups yet. Create one or join using an invite code!</p>
+        {{end}}
+    </div>
+
+    <div class="actions-grid">
+        <div class="card">
+            <h3>➕ Create New Group</h3>
+            <form method="POST" action="/groups/create" class="form">
+                <div class="form-group">
+                    <label for="name">Group Name</label>
+                    <input type="text" id="name" name="name" required 
+                           placeholder="e.g., Family Tasks">
+                </div>
+                <button type="submit" class="btn btn-primary">Create Group</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>🔗 Join Group</h3>
+            <form method="POST" action="/groups/join" class="form">
+                <div class="form-group">
+                    <label for="invite_code">Invite Code</label>
+                    <input type="text" id="invite_code" name="invite_code" required 
+                           placeholder="Enter invite code">
+                </div>
+                <button type="submit" class="btn btn-secondary">Join Group</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
