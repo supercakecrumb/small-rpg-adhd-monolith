@@ -14,7 +14,8 @@ RUN go mod download
 COPY . .
 
 # Build the binary with CGO enabled (required for sqlite3)
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/server
+# Removed -a and -installsuffix cgo flags for faster builds
+RUN CGO_ENABLED=1 GOOS=linux go build -o server ./cmd/server
 
 # Final stage
 FROM alpine:latest
