@@ -12,11 +12,12 @@ import (
 // Store interface defines the methods required from the storage layer
 type Store interface {
 	// User operations
-	CreateUser(username string, telegramID *int64) (*User, error)
+	CreateUser(username string, telegramID *int64, language string) (*User, error)
 	GetUserByID(id int64) (*User, error)
 	GetUserByTelegramID(telegramID int64) (*User, error)
 	GetUserByUsername(username string) (*User, error)
 	GetUsersByGroupID(groupID int64) ([]*User, error)
+	UpdateUserLanguage(userID int64, language string) error
 
 	// Group operations
 	CreateGroup(name, inviteCode string) (*Group, error)
@@ -83,11 +84,11 @@ func NewService(store Store) *Service {
 }
 
 // CreateUser creates a new user
-func (s *Service) CreateUser(username string, telegramID *int64) (*User, error) {
+func (s *Service) CreateUser(username string, telegramID *int64, language string) (*User, error) {
 	if username == "" {
 		return nil, fmt.Errorf("username cannot be empty")
 	}
-	return s.store.CreateUser(username, telegramID)
+	return s.store.CreateUser(username, telegramID, language)
 }
 
 // GetUserByID retrieves a user by ID
@@ -103,6 +104,11 @@ func (s *Service) GetUserByTelegramID(telegramID int64) (*User, error) {
 // GetUserByUsername retrieves a user by username
 func (s *Service) GetUserByUsername(username string) (*User, error) {
 	return s.store.GetUserByUsername(username)
+}
+
+// SetUserLanguage updates preferred language for a user
+func (s *Service) SetUserLanguage(userID int64, language string) error {
+	return s.store.UpdateUserLanguage(userID, language)
 }
 
 // CreateGroup creates a new group with a generated invite code

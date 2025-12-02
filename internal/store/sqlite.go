@@ -41,6 +41,7 @@ func (s *Store) migrate() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		telegram_id INTEGER UNIQUE,
 		username TEXT NOT NULL,
+		language TEXT DEFAULT 'en',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -163,6 +164,19 @@ func (s *Store) migrate() error {
 		return fmt.Errorf("failed to migrate task_notifications table: %w", err)
 	}
 
+	if err := s.migrateUserLanguage(); err != nil {
+		return fmt.Errorf("failed to migrate user language column: %w", err)
+	}
+
+	return nil
+}
+
+// migrateUserLanguage adds language column to users table if it doesn't exist
+func (s *Store) migrateUserLanguage() error {
+	_, err := s.DB.Exec(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`)
+	if err != nil && err.Error() != "duplicate column name: language" {
+		return err
+	}
 	return nil
 }
 

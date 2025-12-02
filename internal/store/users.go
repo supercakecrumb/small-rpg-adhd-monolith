@@ -7,19 +7,22 @@ import (
 )
 
 // CreateUser creates a new user
-func (s *Store) CreateUser(username string, telegramID *int64) (*core.User, error) {
+func (s *Store) CreateUser(username string, telegramID *int64, language string) (*core.User, error) {
 	var result sql.Result
 	var err error
+	if language == "" {
+		language = "en"
+	}
 
 	if telegramID != nil {
 		result, err = s.DB.Exec(
-			"INSERT INTO users (username, telegram_id) VALUES (?, ?)",
-			username, *telegramID,
+			"INSERT INTO users (username, telegram_id, language) VALUES (?, ?, ?)",
+			username, *telegramID, language,
 		)
 	} else {
 		result, err = s.DB.Exec(
-			"INSERT INTO users (username) VALUES (?)",
-			username,
+			"INSERT INTO users (username, language) VALUES (?, ?)",
+			username, language,
 		)
 	}
 
@@ -41,9 +44,9 @@ func (s *Store) GetUserByID(id int64) (*core.User, error) {
 	var telegramID sql.NullInt64
 
 	err := s.DB.QueryRow(
-		"SELECT id, telegram_id, username, created_at FROM users WHERE id = ?",
+		"SELECT id, telegram_id, username, language, created_at FROM users WHERE id = ?",
 		id,
-	).Scan(&user.ID, &telegramID, &user.Username, &user.CreatedAt)
+	).Scan(&user.ID, &telegramID, &user.Username, &user.Language, &user.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -59,15 +62,24 @@ func (s *Store) GetUserByID(id int64) (*core.User, error) {
 	return user, nil
 }
 
+// UpdateUserLanguage sets the user's language preference
+func (s *Store) UpdateUserLanguage(userID int64, language string) error {
+	if language == "" {
+		language = "en"
+	}
+	_, err := s.DB.Exec(`UPDATE users SET language = ? WHERE id = ?`, language, userID)
+	return err
+}
+
 // GetUserByTelegramID retrieves a user by Telegram ID
 func (s *Store) GetUserByTelegramID(telegramID int64) (*core.User, error) {
 	user := &core.User{}
 	var tgID sql.NullInt64
 
 	err := s.DB.QueryRow(
-		"SELECT id, telegram_id, username, created_at FROM users WHERE telegram_id = ?",
+		"SELECT id, telegram_id, username, language, created_at FROM users WHERE telegram_id = ?",
 		telegramID,
-	).Scan(&user.ID, &tgID, &user.Username, &user.CreatedAt)
+	).Scan(&user.ID, &tgID, &user.Username, &user.Language, &user.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -89,9 +101,9 @@ func (s *Store) GetUserByUsername(username string) (*core.User, error) {
 	var telegramID sql.NullInt64
 
 	err := s.DB.QueryRow(
-		"SELECT id, telegram_id, username, created_at FROM users WHERE username = ?",
+		"SELECT id, telegram_id, username, language, created_at FROM users WHERE username = ?",
 		username,
-	).Scan(&user.ID, &telegramID, &user.Username, &user.CreatedAt)
+	).Scan(&user.ID, &telegramID, &user.Username, &user.Language, &user.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -110,7 +122,7 @@ func (s *Store) GetUserByUsername(username string) (*core.User, error) {
 // GetUsersByGroupID retrieves all users in a group
 func (s *Store) GetUsersByGroupID(groupID int64) ([]*core.User, error) {
 	rows, err := s.DB.Query(`
-		SELECT u.id, u.telegram_id, u.username, u.created_at
+		SELECT u.id, u.telegram_id, u.username, u.language, u.created_at
 		FROM users u
 		INNER JOIN group_members gm ON u.id = gm.user_id
 		WHERE gm.group_id = ?
@@ -125,7 +137,7 @@ func (s *Store) GetUsersByGroupID(groupID int64) ([]*core.User, error) {
 		user := &core.User{}
 		var telegramID sql.NullInt64
 
-		if err := rows.Scan(&user.ID, &telegramID, &user.Username, &user.CreatedAt); err != nil {
+		if err := rows.Scan(&user.ID, &telegramID, &user.Username, &user.Language, &user.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 

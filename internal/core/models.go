@@ -7,6 +7,7 @@ type User struct {
 	ID         int64
 	TelegramID *int64 // Nullable
 	Username   string
+	Language   string
 	CreatedAt  time.Time
 }
 

@@ -27,12 +27,22 @@ type Bot struct {
 	translator    *i18n.Translator
 }
 
-func (b *Bot) lang(ctx tele.Context) string {
-	if ctx == nil || ctx.Sender() == nil || ctx.Sender().LanguageCode == "" {
-		return "en"
-	}
-	if strings.HasPrefix(strings.ToLower(ctx.Sender().LanguageCode), "ru") {
+func normalizeLang(lang string) string {
+	lang = strings.ToLower(lang)
+	if strings.HasPrefix(lang, "ru") {
 		return "ru"
+	}
+	return "en"
+}
+
+func (b *Bot) lang(ctx tele.Context, user *core.User) string {
+	if user != nil && user.Language != "" {
+		return normalizeLang(user.Language)
+	}
+	if ctx != nil && ctx.Sender() != nil && ctx.Sender().LanguageCode != "" {
+		if strings.HasPrefix(strings.ToLower(ctx.Sender().LanguageCode), "ru") {
+			return "ru"
+		}
 	}
 	return "en"
 }
@@ -42,6 +52,29 @@ func (b *Bot) t(lang, key string) string {
 		return key
 	}
 	return b.translator.T(lang, key)
+}
+
+func (b *Bot) languageKeyboard(lang string) *tele.ReplyMarkup {
+	lang = normalizeLang(lang)
+	btnEn := tele.InlineButton{Text: b.t(lang, "bot.switch.en"), Data: "lang:en"}
+	btnRu := tele.InlineButton{Text: b.t(lang, "bot.switch.ru"), Data: "lang:ru"}
+	markup := &tele.ReplyMarkup{InlineKeyboard: [][]tele.InlineButton{{btnEn, btnRu}}}
+	return markup
+}
+
+func (b *Bot) handleLanguageSelection(c tele.Context, lang string) error {
+	lang = normalizeLang(lang)
+	user, err := b.service.GetUserByTelegramID(c.Sender().ID)
+	if err != nil {
+		return c.Respond(&tele.CallbackResponse{Text: "❌"})
+	}
+	_ = b.service.SetUserLanguage(user.ID, lang)
+	user.Language = lang
+	markup := b.languageKeyboard(lang)
+	if err := c.Edit(b.t(lang, "bot.switch.prompt"), markup); err != nil {
+		log.Printf("failed to edit language message: %v", err)
+	}
+	return c.Respond(&tele.CallbackResponse{})
 }
 
 // NewBot creates a new Bot instance
@@ -98,6 +131,7 @@ func (b *Bot) setupHandlers() {
 	b.bot.Handle("/balance", b.handleBalance)
 	b.bot.Handle("/tasks", b.handleTasks)
 	b.bot.Handle("/notifications", b.handleNotifications)
+	b.bot.Handle("/switch_language", b.handleSwitchLanguage)
 
 	// Callback handlers
 	b.bot.Handle(tele.OnCallback, b.handleCallback)
@@ -110,7 +144,7 @@ func (b *Bot) handleStart(c tele.Context) error {
 	if username == "" {
 		username = c.Sender().FirstName
 	}
-	lang := b.lang(c)
+	langFromTg := b.lang(c, nil)
 
 	// Check if user already exists
 	user, err := b.service.GetUserByTelegramID(telegramID)
@@ -119,12 +153,17 @@ func (b *Bot) handleStart(c tele.Context) error {
 		b.updateUserPhoto(user.ID, telegramID)
 
 		// Welcome them back
-		return c.Send(fmt.Sprintf(b.t(lang, "bot.start.returning"), user.Username))
+		// If language not set, adopt from Telegram
+		if user.Language == "" && langFromTg != "" {
+			_ = b.service.SetUserLanguage(user.ID, langFromTg)
+			user.Language = langFromTg
+		}
+		return c.Send(fmt.Sprintf(b.t(user.Language, "bot.start.returning"), user.Username))
 	}
 
 	// User doesn't exist, create new user
 	telegramIDPtr := &telegramID
-	newUser, err := b.service.CreateUser(username, telegramIDPtr)
+	newUser, err := b.service.CreateUser(username, telegramIDPtr, langFromTg)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 		return c.Send("❌ Oops! Something went wrong creating your account. Try again?")
@@ -133,19 +172,19 @@ func (b *Bot) handleStart(c tele.Context) error {
 	// Fetch and cache profile photo for new user
 	b.updateUserPhoto(newUser.ID, telegramID)
 
-	return c.Send(fmt.Sprintf(b.t(lang, "bot.start.new"), newUser.Username))
+	return c.Send(fmt.Sprintf(b.t(langFromTg, "bot.start.new"), newUser.Username))
 }
 
 // handleWeb handles the /web command
 func (b *Bot) handleWeb(c tele.Context) error {
 	telegramID := c.Sender().ID
-	lang := b.lang(c)
 
 	// Get user by Telegram ID
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err != nil {
-		return c.Send(b.t(lang, "bot.web.unknown"))
+		return c.Send(b.t(b.lang(c, nil), "bot.web.unknown"))
 	}
+	lang := b.lang(c, user)
 
 	// Generate login hash
 	loginHash := b.generateLoginHash(user.Username)
@@ -163,8 +202,22 @@ func (b *Bot) generateLoginHash(username string) string {
 
 // handleHelp handles the /help command
 func (b *Bot) handleHelp(c tele.Context) error {
-	lang := b.lang(c)
+	var user *core.User
+	if u, err := b.service.GetUserByTelegramID(c.Sender().ID); err == nil {
+		user = u
+	}
+	lang := b.lang(c, user)
 	return c.Send(b.t(lang, "bot.help"))
+}
+
+func (b *Bot) handleSwitchLanguage(c tele.Context) error {
+	user, err := b.service.GetUserByTelegramID(c.Sender().ID)
+	if err != nil {
+		return c.Send("❌")
+	}
+	lang := b.lang(c, user)
+	markup := b.languageKeyboard(lang)
+	return c.Send(b.t(lang, "bot.switch.prompt"), markup)
 }
 
 // handleBalance handles the /balance command
@@ -274,6 +327,10 @@ func (b *Bot) handleTasks(c tele.Context) error {
 // handleCallback handles all inline button callbacks
 func (b *Bot) handleCallback(c tele.Context) error {
 	data := c.Callback().Data
+
+	if strings.HasPrefix(data, "lang:") {
+		return b.handleLanguageSelection(c, strings.TrimPrefix(data, "lang:"))
+	}
 
 	// Handle notification action buttons (format: notify_action_id or notify_reschedule_id_minutes)
 	if strings.HasPrefix(data, "notify_") {
