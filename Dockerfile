@@ -26,12 +26,15 @@ RUN apk add --no-cache ca-certificates sqlite-libs tzdata
 # Create app directory
 WORKDIR /app
 
+
 # Copy binary from builder
 COPY --from=builder /build/server .
 
-# Copy templates and static files
+# Copy templates, static, and locales
 COPY --from=builder /build/templates ./templates
 COPY --from=builder /build/static ./static
+COPY --from=builder /build/locales ./locales
+
 
 # Create directory for database
 RUN mkdir -p /app/data
