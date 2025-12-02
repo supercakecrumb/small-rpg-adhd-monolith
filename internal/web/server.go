@@ -170,9 +170,15 @@ func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interfa
 
 // handleHome redirects to dashboard if logged in, otherwise to login
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.getUserID(r); ok {
+	log.Printf("🏠 handleHome called: %s %s", r.Method, r.URL.Path)
+	log.Printf("   Remote Address: %s", r.RemoteAddr)
+	log.Printf("   User-Agent: %s", r.UserAgent())
+
+	if userID, ok := s.getUserID(r); ok {
+		log.Printf("   ✅ User authenticated (ID: %d), redirecting to /dashboard", userID)
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		return
 	}
+	log.Printf("   ❌ User not authenticated, redirecting to /login")
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

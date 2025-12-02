@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -14,8 +15,9 @@ import (
 
 // Bot represents the Telegram bot
 type Bot struct {
-	bot     *tele.Bot
-	service *core.Service
+	bot       *tele.Bot
+	service   *core.Service
+	publicURL string
 }
 
 // NewBot creates a new Bot instance
@@ -30,9 +32,19 @@ func NewBot(token string, service *core.Service) (*Bot, error) {
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
 
+	// Get public URL from environment
+	publicURL := os.Getenv("PUBLIC_URL")
+	if publicURL == "" {
+		publicURL = "http://localhost:8080"
+		log.Printf("⚠️ PUBLIC_URL not set, using default: %s", publicURL)
+	} else {
+		log.Printf("✅ PUBLIC_URL configured: %s", publicURL)
+	}
+
 	bot := &Bot{
-		bot:     b,
-		service: service,
+		bot:       b,
+		service:   service,
+		publicURL: publicURL,
 	}
 
 	bot.setupHandlers()
@@ -54,6 +66,8 @@ func (b *Bot) Stop() {
 func (b *Bot) setupHandlers() {
 	// Command handlers
 	b.bot.Handle("/start", b.handleStart)
+	b.bot.Handle("/web", b.handleWeb)
+	b.bot.Handle("/help", b.handleHelp)
 	b.bot.Handle("/balance", b.handleBalance)
 	b.bot.Handle("/tasks", b.handleTasks)
 
@@ -75,8 +89,11 @@ func (b *Bot) handleStart(c tele.Context) error {
 		// User exists, welcome them back
 		return c.Send(fmt.Sprintf(
 			"🎮 Welcome back, %s! Ready to conquer some tasks?\n\n"+
-				"💰 Use /balance to check your coins\n"+
-				"📋 Use /tasks to complete tasks and earn rewards!\n\n"+
+				"Quick commands:\n"+
+				"💰 /balance - Check your coins\n"+
+				"📋 /tasks - Complete tasks & earn rewards\n"+
+				"🌐 /web - Access the Web UI\n"+
+				"❓ /help - Show all commands\n\n"+
 				"Let's get those dopamine hits! 🚀",
 			user.Username,
 		))
@@ -97,12 +114,52 @@ func (b *Bot) handleStart(c tele.Context) error {
 			"🪙 Coin rewards for every win\n"+
 			"🎯 Group challenges with friends\n\n"+
 			"💡 Quick start:\n"+
-			"1. Join a group via the web interface\n"+
-			"2. Use /tasks to start earning coins\n"+
-			"3. Level up your productivity! 🚀\n\n"+
+			"1. Use /web to access the Web UI\n"+
+			"2. Create or join a group\n"+
+			"3. Use /tasks to start earning coins\n"+
+			"4. Level up your productivity! 🚀\n\n"+
+			"Need help? Type /help for all commands\n"+
 			"Pro tip: Small wins add up to big victories! 💪",
 		newUser.Username,
 	))
+}
+
+// handleWeb handles the /web command
+func (b *Bot) handleWeb(c tele.Context) error {
+	return c.Send(fmt.Sprintf(
+		"🌐 Web UI Access\n\n"+
+			"Access the web interface at:\n"+
+			"🔗 %s\n\n"+
+			"📝 How to use the Web UI:\n"+
+			"1. Register or log in with a username\n"+
+			"2. Create a new group or join one with an invite code\n"+
+			"3. Add tasks and shop items to your group\n"+
+			"4. Use this bot to complete tasks quickly!\n\n"+
+			"💡 Note: Your Telegram account is linked to the bot,\n"+
+			"but the Web UI uses separate login credentials.\n"+
+			"Both systems work together seamlessly! ✨",
+		b.publicURL,
+	))
+}
+
+// handleHelp handles the /help command
+func (b *Bot) handleHelp(c tele.Context) error {
+	return c.Send(
+		"🤖 ADHD Quest System - Command Guide\n\n" +
+			"Basic Commands:\n" +
+			"🏁 /start - Register & get started\n" +
+			"❓ /help - Show this help message\n" +
+			"🌐 /web - Get Web UI access link\n\n" +
+			"Game Commands:\n" +
+			"💰 /balance - Check your coin balance\n" +
+			"📋 /tasks - Browse & complete tasks\n\n" +
+			"How it works:\n" +
+			"1. Create or join groups via the Web UI\n" +
+			"2. Tasks and shop items are managed on the web\n" +
+			"3. Use the bot for quick task completion\n" +
+			"4. Earn coins and spend them in the shop!\n\n" +
+			"Need more help? Visit the Web UI for full features! 🚀",
+	)
 }
 
 // handleBalance handles the /balance command
@@ -123,13 +180,17 @@ func (b *Bot) handleBalance(c tele.Context) error {
 	}
 
 	if len(groups) == 0 {
-		return c.Send(
-			"🏜️ You're not in any groups yet!\n\n" +
-				"Head over to the web interface to:\n" +
-				"• Create your own group\n" +
-				"• Join existing groups with invite codes\n\n" +
-				"Then come back here to start earning those coins! 💰",
-		)
+		return c.Send(fmt.Sprintf(
+			"🏜️ You're not in any groups yet!\n\n"+
+				"Head over to the Web UI to:\n"+
+				"• Create your own group\n"+
+				"• Join existing groups with invite codes\n\n"+
+				"Access the web at:\n"+
+				"🔗 %s\n\n"+
+				"Then come back here to start earning those coins! 💰\n\n"+
+				"Type /web for more info about the Web UI",
+			b.publicURL,
+		))
 	}
 
 	// Build balance message
@@ -176,10 +237,14 @@ func (b *Bot) handleTasks(c tele.Context) error {
 	}
 
 	if len(groups) == 0 {
-		return c.Send(
-			"🏜️ No groups yet!\n\n" +
-				"Join a group via the web interface first, then come back here to complete tasks! 🎯",
-		)
+		return c.Send(fmt.Sprintf(
+			"🏜️ No groups yet!\n\n"+
+				"Access the Web UI at:\n"+
+				"🔗 %s\n\n"+
+				"Join or create a group, then come back here to complete tasks! 🎯\n\n"+
+				"Type /web for more info",
+			b.publicURL,
+		))
 	}
 
 	// Create inline keyboard with group buttons
@@ -253,9 +318,14 @@ func (b *Bot) handleGroupSelection(c tele.Context, groupID int64) error {
 	}
 
 	if len(tasks) == 0 {
-		return c.Edit(
-			fmt.Sprintf("📭 No tasks in %s yet!\n\nCreate some tasks via the web interface first.", group.Name),
-		)
+		return c.Edit(fmt.Sprintf(
+			"📭 No tasks in %s yet!\n\n"+
+				"Create some tasks via the Web UI:\n"+
+				"🔗 %s\n\n"+
+				"Type /web for more info",
+			group.Name,
+			b.publicURL,
+		))
 	}
 
 	// Create inline keyboard with task buttons

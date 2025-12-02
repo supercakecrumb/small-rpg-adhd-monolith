@@ -1,6 +1,7 @@
 package web
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -94,6 +95,8 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 // handleLogout logs out the user
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	log.Printf("🚪 handleLogout called: %s %s", r.Method, r.URL.Path)
 	s.clearSession(w, r)
+	log.Printf("✅ Session cleared, redirecting to /login")
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

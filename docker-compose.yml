@@ -11,6 +11,7 @@ services:
       - PORT=8080
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:8080}
       - DB_PATH=/app/data/small-rpg.db
     volumes:
       # Persist SQLite database

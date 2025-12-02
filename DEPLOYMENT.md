@@ -70,6 +70,100 @@ The workflow automatically creates the following tags:
 - `v1` - Major version tags
 - `main-<sha>` - Commit SHA tags
 
+### Authenticating with GitHub Container Registry
+
+**Important:** By default, packages published to GitHub Container Registry (GHCR) are **Private**. If you see an error like `Error response from daemon: error from registry: denied`, you need to authenticate before pulling the image.
+
+#### Option 1: Authenticate with Docker (For Private Packages)
+
+To pull private images from GHCR, you need a GitHub Personal Access Token (PAT) with `read:packages` scope.
+
+1. **Create a Personal Access Token:**
+   - Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Give it a descriptive name (e.g., "Docker GHCR Access")
+   - Select the following scope:
+     - `read:packages` - Download packages from GitHub Package Registry
+   - Click "Generate token" and **copy the token** (you won't see it again)
+
+2. **Authenticate Docker with GHCR:**
+   ```bash
+   # Login to GHCR using your GitHub username and PAT
+   echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
+
+   Example:
+   ```bash
+   echo "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" | docker login ghcr.io -u supercakecrumb --password-stdin
+   ```
+
+3. **Verify authentication:**
+   ```bash
+   docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+   ```
+
+4. **Save credentials (optional):**
+   Docker will save your credentials in `~/.docker/config.json`. You only need to login once per machine.
+
+#### Option 2: Make the Package Public (No Authentication Required)
+
+If you want anyone to pull your image without authentication, you can change the package visibility to Public. This allows anyone to pull the container image without needing a GitHub Personal Access Token or Docker login.
+
+**Step-by-step instructions to make the package public:**
+
+1. **Go to your GitHub repository main page**
+   - Navigate to `https://github.com/YOUR_USERNAME/small-rpg-adhd-monolith`
+
+2. **Locate the Packages section**
+   - Look for the "Packages" section on the right sidebar
+   - Alternatively, click the "Packages" tab if it's visible in the repository navigation
+
+3. **Click on the package name**
+   - Click on `small-rpg-adhd-monolith` in the packages list
+
+4. **Open Package settings**
+   - On the package page, look for "Package settings" in the right sidebar
+   - Click "Package settings"
+
+5. **Navigate to the Danger Zone**
+   - Scroll down to the bottom of the settings page
+   - Find the "Danger Zone" section
+
+6. **Change visibility**
+   - Click "Change visibility"
+   - A dialog will appear asking you to confirm
+
+7. **Select Public and confirm**
+   - Select "Public" from the options
+   - Type the package name to confirm
+   - Click the confirmation button
+
+**Result:** After making the package public, anyone can pull it without authentication:
+```bash
+docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+```
+
+No GitHub Personal Access Token or `docker login` is required for public packages.
+
+#### Docker Compose with Private Images
+
+If using a private image in [`docker-compose.yml`](docker-compose.yml:1), you must authenticate first:
+
+```bash
+# 1. Login to GHCR
+echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# 2. Update docker-compose.yml to use the GHCR image
+# Change the 'build' section to 'image':
+# services:
+#   app:
+#     image: ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+
+# 3. Pull and run
+docker-compose pull
+docker-compose up -d
+```
+
 ### Pulling from GitHub Container Registry
 
 ```bash
