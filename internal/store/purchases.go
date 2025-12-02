@@ -66,7 +66,7 @@ func (s *Store) GetPurchaseByID(id int64) (*core.Purchase, error) {
 func (s *Store) GetPurchasesByUserAndGroup(userID, groupID int64) ([]*core.Purchase, error) {
 	query := `
 		SELECT id, transaction_id, user_id, group_id, shop_item_id,
-		       fulfilled, fulfilled_at, fulfilled_by, notes, created_at
+		       fulfilled, fulfilled_at, fulfilled_by, COALESCE(notes, '') as notes, created_at
 		FROM purchases
 		WHERE user_id = ? AND group_id = ?
 		ORDER BY created_at DESC

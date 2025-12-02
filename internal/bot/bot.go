@@ -227,33 +227,25 @@ func (b *Bot) handleBalance(c tele.Context) error {
 	// Get user
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err != nil {
-		return c.Send("❌ Hmm, I don't know you yet! Use /start to get registered.")
+		return c.Send(b.t("en", "bot.web.unknown"))
 	}
+	lang := b.lang(c, user)
 
 	// Get all groups for this user
 	groups, err := b.service.GetGroupsByUserID(user.ID)
 	if err != nil {
 		log.Printf("Error getting groups: %v", err)
-		return c.Send("❌ Couldn't fetch your groups. Try again?")
+		return c.Send(b.t(lang, "bot.error.groups"))
 	}
 
 	if len(groups) == 0 {
-		return c.Send(fmt.Sprintf(
-			"🏜️ You're not in any groups yet!\n\n"+
-				"Head over to the Web UI to:\n"+
-				"• Create your own group\n"+
-				"• Join existing groups with invite codes\n\n"+
-				"Access the web at:\n"+
-				"🔗 %s\n\n"+
-				"Then come back here to start earning those coins! 💰\n\n"+
-				"Type /web for more info about the Web UI",
-			b.publicURL,
-		))
+		return c.Send(fmt.Sprintf(b.t(lang, "bot.balance.empty"), b.publicURL))
 	}
 
 	// Build balance message
 	var msg strings.Builder
-	msg.WriteString("💰 Your Coin Balance:\n\n")
+	msg.WriteString(b.t(lang, "bot.balance.header"))
+	msg.WriteString("\n\n")
 
 	totalCoins := 0
 	for _, group := range groups {
@@ -263,15 +255,16 @@ func (b *Bot) handleBalance(c tele.Context) error {
 			continue
 		}
 		totalCoins += balance
-		msg.WriteString(fmt.Sprintf("🏷️ %s: %d coins\n", group.Name, balance))
+		msg.WriteString(fmt.Sprintf(b.t(lang, "bot.balance.line"), group.Name, balance))
+		msg.WriteString("\n")
 	}
 
-	msg.WriteString(fmt.Sprintf("\n✨ Total: %d coins across all groups!\n", totalCoins))
+	msg.WriteString(fmt.Sprintf("\n"+b.t(lang, "bot.balance.total"), totalCoins))
 
 	if totalCoins == 0 {
-		msg.WriteString("\n💡 Complete tasks with /tasks to start earning!")
+		msg.WriteString("\n\n" + b.t(lang, "bot.balance.tip"))
 	} else if totalCoins >= 100 {
-		msg.WriteString("\n🎉 Wow! You're crushing it! Keep going!")
+		msg.WriteString("\n\n" + b.t(lang, "bot.balance.celebrate"))
 	}
 
 	return c.Send(msg.String())
@@ -284,25 +277,19 @@ func (b *Bot) handleTasks(c tele.Context) error {
 	// Get user
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err != nil {
-		return c.Send("❌ I don't know you yet! Use /start to get registered.")
+		return c.Send(b.t("en", "bot.web.unknown"))
 	}
+	lang := b.lang(c, user)
 
 	// Get all groups for this user
 	groups, err := b.service.GetGroupsByUserID(user.ID)
 	if err != nil {
 		log.Printf("Error getting groups: %v", err)
-		return c.Send("❌ Couldn't fetch your groups. Try again?")
+		return c.Send(b.t(lang, "bot.error.groups"))
 	}
 
 	if len(groups) == 0 {
-		return c.Send(fmt.Sprintf(
-			"🏜️ No groups yet!\n\n"+
-				"Access the Web UI at:\n"+
-				"🔗 %s\n\n"+
-				"Join or create a group, then come back here to complete tasks! 🎯\n\n"+
-				"Type /web for more info",
-			b.publicURL,
-		))
+		return c.Send(fmt.Sprintf(b.t(lang, "bot.tasks.empty"), b.publicURL))
 	}
 
 	// Create inline keyboard with group buttons
@@ -317,11 +304,7 @@ func (b *Bot) handleTasks(c tele.Context) error {
 
 	markup := &tele.ReplyMarkup{InlineKeyboard: rows}
 
-	return c.Send(
-		"🎯 Choose a group to see available tasks:\n\n"+
-			"Pick one and let's earn some coins! 💪",
-		markup,
-	)
+	return c.Send(b.t(lang, "bot.tasks.choose"), markup)
 }
 
 // handleCallback handles all inline button callbacks
@@ -855,23 +838,24 @@ func (b *Bot) handleNotifications(c tele.Context) error {
 	// Get user
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err != nil {
-		return c.Send("❌ I don't know you yet! Use /start to get registered.")
+		return c.Send(b.t("en", "bot.web.unknown"))
 	}
+	lang := b.lang(c, user)
 
 	// Get current notification status
 	profile, err := b.service.GetUserProfile(user.ID)
-	currentStatus := "disabled"
+	currentStatus := b.t(lang, "bot.notifications.status.disabled")
 	if err == nil && profile != nil && profile.NotificationEnabled {
-		currentStatus = "enabled"
+		currentStatus = b.t(lang, "bot.notifications.status.enabled")
 	}
 
 	// Create inline keyboard for notification toggle
 	btnEnable := tele.InlineButton{
-		Text: "✅ Enable Notifications",
+		Text: b.t(lang, "bot.notifications.enable"),
 		Data: "notif:enable",
 	}
 	btnDisable := tele.InlineButton{
-		Text: "🔕 Disable Notifications",
+		Text: b.t(lang, "bot.notifications.disable"),
 		Data: "notif:disable",
 	}
 
@@ -882,18 +866,7 @@ func (b *Bot) handleNotifications(c tele.Context) error {
 		},
 	}
 
-	return c.Send(
-		fmt.Sprintf("🔔 Notification Settings\n\n"+
-			"Current status: %s\n\n"+
-			"When enabled, you'll receive notifications about:\n"+
-			"• Task completions by group members\n"+
-			"• Shop purchases in your groups\n"+
-			"• Activity updates\n\n"+
-			"Choose your preference:",
-			currentStatus,
-		),
-		markup,
-	)
+	return c.Send(fmt.Sprintf(b.t(lang, "bot.notifications.header"), currentStatus), markup)
 }
 
 // notifyGroupMembers sends notifications to all group members (except the actor)
