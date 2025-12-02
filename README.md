@@ -1,4 +1,4 @@
-# Small RPG ADHD Monolith
+# RatPG ADHD Monolith
 
 A gamified habit-reward system for small groups combining Web UI and Telegram Bot functionality. Create tasks, earn coins, and spend them in the shop—all while staying motivated with your team!
 
@@ -22,7 +22,7 @@ A gamified habit-reward system for small groups combining Web UI and Telegram Bo
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd small-rpg-adhd-monolith
+cd ratpg-adhd-monolith
 ```
 
 2. Install dependencies:
@@ -60,7 +60,7 @@ export TELEGRAM_BOT_TOKEN=your-bot-token-here  # Optional
 export PORT=8080
 export SESSION_SECRET=your-strong-random-secret-here
 export TELEGRAM_BOT_TOKEN=your-bot-token-here
-export DB_PATH=/var/lib/small-rpg/data.db
+export DB_PATH=/var/lib/ratpg/data.db
 ```
 
 ### Getting a Telegram Bot Token
@@ -93,14 +93,14 @@ go build -o server cmd/server/main.go
 
 ```bash
 # Build Docker image
-docker build -t small-rpg-adhd-monolith .
+docker build -t ratpg-adhd-monolith .
 
 # Run container
 docker run -p 8080:8080 \
   -e SESSION_SECRET=your-secret-here \
   -e TELEGRAM_BOT_TOKEN=your-token-here \
   -v $(pwd)/data:/data \
-  small-rpg-adhd-monolith
+  ratpg-adhd-monolith
 ```
 
 ## Usage
@@ -174,7 +174,7 @@ If `TELEGRAM_BOT_TOKEN` is configured, you can interact via Telegram:
 ## Project Structure
 
 ```
-small-rpg-adhd-monolith/
+ratpg-adhd-monolith/
 ├── cmd/
 │   └── server/main.go              # Application entry point
 ├── internal/
@@ -196,7 +196,6 @@ small-rpg-adhd-monolith/
 ├── templates/
 │   ├── layout.html                 # Base template
 │   ├── login.html                  # Login page
-│   ├── register.html               # Registration page
 │   ├── dashboard.html              # User dashboard
 │   └── group.html                  # Group management
 ├── static/
@@ -280,7 +279,7 @@ The project follows clean architecture principles:
 
 If you see "database is locked":
 - Ensure only one instance is running
-- Check file permissions on `small-rpg.db`
+- Check file permissions on `ratpg.db`
 
 ### Session Issues
 
@@ -305,7 +304,7 @@ If you're logged out frequently:
 
 2. **Use HTTPS**: Deploy behind a reverse proxy (nginx, Caddy) with TLS
 
-3. **Database Backups**: Regularly backup `small-rpg.db`
+3. **Database Backups**: Regularly backup `ratpg.db`
 
 4. **Bot Token Security**: Never commit your bot token to git
 

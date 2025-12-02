@@ -83,6 +83,30 @@ func (s *Store) GetUserByTelegramID(telegramID int64) (*core.User, error) {
 	return user, nil
 }
 
+// GetUserByUsername retrieves a user by username
+func (s *Store) GetUserByUsername(username string) (*core.User, error) {
+	user := &core.User{}
+	var telegramID sql.NullInt64
+
+	err := s.DB.QueryRow(
+		"SELECT id, telegram_id, username, created_at FROM users WHERE username = ?",
+		username,
+	).Scan(&user.ID, &telegramID, &user.Username, &user.CreatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if telegramID.Valid {
+		user.TelegramID = &telegramID.Int64
+	}
+
+	return user, nil
+}
+
 // GetUsersByGroupID retrieves all users in a group
 func (s *Store) GetUsersByGroupID(groupID int64) ([]*core.User, error) {
 	rows, err := s.DB.Query(`

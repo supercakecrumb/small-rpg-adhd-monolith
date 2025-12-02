@@ -12,6 +12,7 @@ type Store interface {
 	CreateUser(username string, telegramID *int64) (*User, error)
 	GetUserByID(id int64) (*User, error)
 	GetUserByTelegramID(telegramID int64) (*User, error)
+	GetUserByUsername(username string) (*User, error)
 	GetUsersByGroupID(groupID int64) ([]*User, error)
 
 	// Group operations
@@ -67,6 +68,11 @@ func (s *Service) GetUserByID(id int64) (*User, error) {
 // GetUserByTelegramID retrieves a user by Telegram ID
 func (s *Service) GetUserByTelegramID(telegramID int64) (*User, error) {
 	return s.store.GetUserByTelegramID(telegramID)
+}
+
+// GetUserByUsername retrieves a user by username
+func (s *Service) GetUserByUsername(username string) (*User, error) {
+	return s.store.GetUserByUsername(username)
 }
 
 // CreateGroup creates a new group with a generated invite code

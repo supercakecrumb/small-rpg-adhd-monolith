@@ -10,7 +10,7 @@
 
 1. **Build the image:**
    ```bash
-   docker build -t small-rpg-adhd-monolith .
+   docker build -t ratpg-adhd-monolith .
    ```
 
 2. **Run with Docker Compose:**
@@ -99,7 +99,7 @@ To pull private images from GHCR, you need a GitHub Personal Access Token (PAT) 
 
 3. **Verify authentication:**
    ```bash
-   docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+   docker pull ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
    ```
 
 4. **Save credentials (optional):**
@@ -112,14 +112,14 @@ If you want anyone to pull your image without authentication, you can change the
 **Step-by-step instructions to make the package public:**
 
 1. **Go to your GitHub repository main page**
-   - Navigate to `https://github.com/YOUR_USERNAME/small-rpg-adhd-monolith`
+   - Navigate to `https://github.com/YOUR_USERNAME/ratpg-adhd-monolith`
 
 2. **Locate the Packages section**
    - Look for the "Packages" section on the right sidebar
    - Alternatively, click the "Packages" tab if it's visible in the repository navigation
 
 3. **Click on the package name**
-   - Click on `small-rpg-adhd-monolith` in the packages list
+   - Click on `ratpg-adhd-monolith` in the packages list
 
 4. **Open Package settings**
    - On the package page, look for "Package settings" in the right sidebar
@@ -140,7 +140,7 @@ If you want anyone to pull your image without authentication, you can change the
 
 **Result:** After making the package public, anyone can pull it without authentication:
 ```bash
-docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+docker pull ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
 ```
 
 No GitHub Personal Access Token or `docker login` is required for public packages.
@@ -157,7 +157,7 @@ echo "YOUR_PAT_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-
 # Change the 'build' section to 'image':
 # services:
 #   app:
-#     image: ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+#     image: ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
 
 # 3. Pull and run
 docker-compose pull
@@ -168,7 +168,7 @@ docker-compose up -d
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+docker pull ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
 
 # Run the image
 docker run -d \
@@ -176,7 +176,7 @@ docker run -d \
   -e SESSION_SECRET=your-secret \
   -e TELEGRAM_BOT_TOKEN=your-token \
   -v $(pwd)/data:/app/data \
-  ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+  ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
 ```
 
 ### Production Deployment
@@ -189,7 +189,7 @@ docker run -d \
    
    services:
      app:
-       image: ghcr.io/supercakecrumb/small-rpg-adhd-monolith:latest
+       image: ghcr.io/supercakecrumb/ratpg-adhd-monolith:latest
        ports:
          - "8080:8080"
        environment:
@@ -283,7 +283,7 @@ For production deployments, consider:
 To rollback to a previous version:
 ```bash
 # Pull specific version
-docker pull ghcr.io/supercakecrumb/small-rpg-adhd-monolith:v1.0.0
+docker pull ghcr.io/supercakecrumb/ratpg-adhd-monolith:v1.0.0
 
 # Update docker-compose.yml to use specific tag
 # Then restart

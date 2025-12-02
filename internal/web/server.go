@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"small-rpg-adhd-monolith/internal/core"
@@ -14,25 +15,46 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+// getEnv retrieves an environment variable or returns a default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 const sessionName = "small-rpg-session"
 const sessionUserIDKey = "user_id"
 
 // Server represents the HTTP server
 type Server struct {
-	service      *core.Service
-	sessionStore *sessions.CookieStore
-	templates    *template.Template
+	service       *core.Service
+	sessionStore  *sessions.CookieStore
+	templates     *template.Template
+	sessionSecret string
 }
 
 // NewServer creates a new Server instance
 func NewServer(service *core.Service, sessionSecret string) (*Server, error) {
 	// Create session store
 	store := sessions.NewCookieStore([]byte(sessionSecret))
+
+	// Detect if running behind HTTPS by checking PUBLIC_URL environment variable
+	publicURL := getEnv("PUBLIC_URL", "http://localhost:8080")
+	isHTTPS := len(publicURL) >= 5 && publicURL[:5] == "https"
+
 	store.Options = &sessions.Options{
 		Path:     "/",
 		MaxAge:   86400 * 7, // 7 days
 		HttpOnly: true,
+		Secure:   isHTTPS, // Set Secure flag for HTTPS environments
 		SameSite: http.SameSiteLaxMode,
+	}
+
+	if isHTTPS {
+		log.Printf("🔒 Running behind HTTPS - Secure cookie flag enabled")
+	} else {
+		log.Printf("🔓 Running on HTTP - Secure cookie flag disabled (local dev)")
 	}
 
 	// Note: We don't pre-parse all templates here anymore.
@@ -42,9 +64,10 @@ func NewServer(service *core.Service, sessionSecret string) (*Server, error) {
 	log.Printf("Template parsing will happen on-demand for each page")
 
 	return &Server{
-		service:      service,
-		sessionStore: store,
-		templates:    nil, // Will be nil, parse on-demand instead
+		service:       service,
+		sessionStore:  store,
+		templates:     nil, // Will be nil, parse on-demand instead
+		sessionSecret: sessionSecret,
 	}, nil
 }
 
@@ -64,9 +87,7 @@ func (s *Server) Router() http.Handler {
 	// Public routes
 	r.Get("/", s.handleHome)
 	r.Get("/login", s.handleLoginPage)
-	r.Post("/login", s.handleLogin)
-	r.Get("/register", s.handleRegisterPage)
-	r.Post("/register", s.handleRegister)
+	r.Get("/auth", s.handleHashLogin) // Hash-based login from Telegram
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
@@ -93,16 +114,20 @@ func (s *Server) Router() http.Handler {
 
 // getUserID retrieves the user ID from the session
 func (s *Server) getUserID(r *http.Request) (int64, bool) {
+	log.Printf("🔍 getUserID called for %s %s", r.Method, r.URL.Path)
 	session, err := s.sessionStore.Get(r, sessionName)
 	if err != nil {
+		log.Printf("   ❌ Session retrieval error: %v", err)
 		return 0, false
 	}
 
 	userID, ok := session.Values[sessionUserIDKey].(int64)
 	if !ok {
+		log.Printf("   ❌ No user_id in session or invalid type")
 		return 0, false
 	}
 
+	log.Printf("   ✅ User ID found: %d", userID)
 	return userID, true
 }
 
@@ -131,10 +156,13 @@ func (s *Server) clearSession(w http.ResponseWriter, r *http.Request) error {
 // requireAuth is middleware that ensures the user is authenticated
 func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("🔐 requireAuth middleware for: %s %s", r.Method, r.URL.Path)
 		if _, ok := s.getUserID(r); !ok {
+			log.Printf("   ❌ Not authenticated, redirecting to /login")
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
+		log.Printf("   ✅ Authenticated, proceeding to handler")
 		next.ServeHTTP(w, r)
 	})
 }

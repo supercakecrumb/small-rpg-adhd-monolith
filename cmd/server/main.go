@@ -70,7 +70,7 @@ func main() {
 	// Initialize and start Telegram bot if token is provided
 	if botToken != "" {
 		log.Println("Initializing Telegram bot...")
-		telegramBot, err := bot.NewBot(botToken, service)
+		telegramBot, err := bot.NewBot(botToken, service, sessionSecret)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize Telegram bot: %v", err)
 			log.Println("Continuing without Telegram bot...")

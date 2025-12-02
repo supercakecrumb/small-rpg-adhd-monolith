@@ -1,6 +1,9 @@
 package bot
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -15,13 +18,14 @@ import (
 
 // Bot represents the Telegram bot
 type Bot struct {
-	bot       *tele.Bot
-	service   *core.Service
-	publicURL string
+	bot           *tele.Bot
+	service       *core.Service
+	publicURL     string
+	sessionSecret string
 }
 
 // NewBot creates a new Bot instance
-func NewBot(token string, service *core.Service) (*Bot, error) {
+func NewBot(token string, service *core.Service, sessionSecret string) (*Bot, error) {
 	pref := tele.Settings{
 		Token:  token,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
@@ -42,9 +46,10 @@ func NewBot(token string, service *core.Service) (*Bot, error) {
 	}
 
 	bot := &Bot{
-		bot:       b,
-		service:   service,
-		publicURL: publicURL,
+		bot:           b,
+		service:       service,
+		publicURL:     publicURL,
+		sessionSecret: sessionSecret,
 	}
 
 	bot.setupHandlers()
@@ -126,20 +131,42 @@ func (b *Bot) handleStart(c tele.Context) error {
 
 // handleWeb handles the /web command
 func (b *Bot) handleWeb(c tele.Context) error {
+	telegramID := c.Sender().ID
+
+	// Get user by Telegram ID
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		return c.Send(
+			"❌ I don't know you yet! Please use /start first to register.",
+		)
+	}
+
+	// Generate login hash
+	loginHash := b.generateLoginHash(user.Username)
+	loginURL := fmt.Sprintf("%s/auth?user=%s&hash=%s", b.publicURL, user.Username, loginHash)
+
 	return c.Send(fmt.Sprintf(
 		"🌐 Web UI Access\n\n"+
-			"Access the web interface at:\n"+
+			"Click the link below to log in:\n"+
 			"🔗 %s\n\n"+
-			"📝 How to use the Web UI:\n"+
-			"1. Register or log in with a username\n"+
-			"2. Create a new group or join one with an invite code\n"+
-			"3. Add tasks and shop items to your group\n"+
-			"4. Use this bot to complete tasks quickly!\n\n"+
-			"💡 Note: Your Telegram account is linked to the bot,\n"+
-			"but the Web UI uses separate login credentials.\n"+
-			"Both systems work together seamlessly! ✨",
-		b.publicURL,
+			"📝 This secure link will:\n"+
+			"• Log you into the web interface automatically\n"+
+			"• Give you access to all your groups and tasks\n"+
+			"• Let you manage tasks, shop items, and more\n\n"+
+			"⚠️ Security note:\n"+
+			"This link is unique to you and should not be shared.\n"+
+			"It will remain valid until you request a new one.\n\n"+
+			"💡 Tip: Use the web UI to manage your groups,\n"+
+			"then come back here to quickly complete tasks! ✨",
+		loginURL,
 	))
+}
+
+// generateLoginHash generates an HMAC-SHA256 hash for username
+func (b *Bot) generateLoginHash(username string) string {
+	h := hmac.New(sha256.New, []byte(b.sessionSecret))
+	h.Write([]byte(username))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // handleHelp handles the /help command
