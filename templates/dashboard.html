@@ -96,6 +96,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="card edu-section">
+        <div class="edu-header">
+            <div>
+                <p class="eyebrow">{{t .Locale "dashboard.info.eyebrow"}}</p>
+                <h3>{{t .Locale "dashboard.info.title"}}</h3>
+                <p class="text-muted">{{t .Locale "dashboard.info.subtitle"}}</p>
+            </div>
+        </div>
 
         <div class="edu-grid">
             <div class="edu-card">
@@ -122,32 +132,40 @@
     </div>
 
     <div class="card deep-explain">
-        <div class="deep-grid">
-            <div class="deep-block">
+        <div class="deep-row">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.what.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.what.desc"}}</p>
             </div>
-            <div class="deep-block">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.quests.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.quests.desc"}}</p>
             </div>
-            <div class="deep-block">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.rewards.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.rewards.desc"}}</p>
             </div>
-            <div class="deep-block">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.party.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.party.desc"}}</p>
             </div>
-            <div class="deep-block">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.cheese.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.cheese.desc"}}</p>
             </div>
-            <div class="deep-block">
+            <div class="deep-line">
                 <h4>{{t .Locale "dashboard.deep.invite.title"}}</h4>
                 <p>{{t .Locale "dashboard.deep.invite.desc"}}</p>
             </div>
         </div>
+        <div class="deep-footer">
+            <p>{{t .Locale "dashboard.deep.footer"}}</p>
+        </div>
+    </div>
+
+    <div class="card deep-narrative">
+        <h4>{{t .Locale "dashboard.narrative.title"}}</h4>
+        <p>{{t .Locale "dashboard.narrative.body"}}</p>
     </div>
 </div>
 </div>

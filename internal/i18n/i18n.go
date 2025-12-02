@@ -24,30 +24,39 @@ func NewTranslator(dir string, defaultLang string) (*Translator, error) {
 		defaultLang: defaultLang,
 	}
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	roots := []string{dir}
+	if exe, err := os.Executable(); err == nil {
+		roots = append(roots, filepath.Join(filepath.Dir(exe), dir))
+	}
+
+	var loadErr error
+	found := false
+	for _, root := range roots {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() || !strings.HasSuffix(d.Name(), ".yaml") {
+				return nil
+			}
+			lang := strings.TrimSuffix(d.Name(), ".yaml")
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return fmt.Errorf("read locale %s: %w", path, readErr)
+			}
+			kv := make(map[string]string)
+			if unmarshalErr := yaml.Unmarshal(data, &kv); unmarshalErr != nil {
+				return fmt.Errorf("parse locale %s: %w", path, unmarshalErr)
+			}
+			if len(kv) > 0 {
+				t.locales[lang] = kv
+				found = true
+			}
+			return nil
+		})
 		if err != nil {
-			return err
+			loadErr = err
 		}
-		if d.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(d.Name(), ".yaml") {
-			return nil
-		}
-		lang := strings.TrimSuffix(d.Name(), ".yaml")
-		data, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return fmt.Errorf("read locale %s: %w", path, readErr)
-		}
-		kv := make(map[string]string)
-		if unmarshalErr := yaml.Unmarshal(data, &kv); unmarshalErr != nil {
-			return fmt.Errorf("parse locale %s: %w", path, unmarshalErr)
-		}
-		t.locales[lang] = kv
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	// Ensure default exists
@@ -55,6 +64,9 @@ func NewTranslator(dir string, defaultLang string) (*Translator, error) {
 		t.locales[defaultLang] = make(map[string]string)
 	}
 
+	if !found && loadErr != nil {
+		return t, loadErr
+	}
 	return t, nil
 }
 
