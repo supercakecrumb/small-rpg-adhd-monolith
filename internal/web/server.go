@@ -170,8 +170,9 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("🔐 requireAuth middleware for: %s %s", r.Method, r.URL.Path)
 		if _, ok := s.getUserID(r); !ok {
-			log.Printf("   ❌ Not authenticated, redirecting to /login")
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			log.Printf("   ❌ Not authenticated, rendering login (no redirect to avoid loops)")
+			// Render login page directly to avoid redirect loops when cookies are blocked
+			s.handleLoginPage(w, r)
 			return
 		}
 		log.Printf("   ✅ Authenticated, proceeding to handler")
@@ -216,9 +217,10 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 	if userID, ok := s.getUserID(r); ok {
 		log.Printf("   ✅ User authenticated (ID: %d), redirecting to /dashboard", userID)
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		// Render dashboard directly to avoid redirect loops in some environments
+		s.handleDashboard(w, r)
 		return
 	}
-	log.Printf("   ❌ User not authenticated, redirecting to /login")
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	log.Printf("   ❌ User not authenticated, rendering login")
+	s.handleLoginPage(w, r)
 }
