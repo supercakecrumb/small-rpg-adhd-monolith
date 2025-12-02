@@ -1,20 +1,20 @@
 {{define "content"}}
 <div class="group-view">
     <div class="group-topbar">
-            <div class="group-topbar-left">
-                <div class="crumb-row">
-                    <a href="/dashboard" class="crumb-link">The Burrow</a>
-                    <span class="crumb-divider">•</span>
-                    <span class="crumb-current">{{.Group.Name}}</span>
-                </div>
+        <div class="group-topbar-left">
+            <div class="crumb-row">
+                <a href="/dashboard" class="crumb-link">{{t .Locale "nav.burrow"}}</a>
+                <span class="crumb-divider">•</span>
+                <span class="crumb-current">{{.Group.Name}}</span>
             </div>
+        </div>
         <div class="group-topbar-center">
-            <a href="/groups/{{.Group.ID}}/tasks/log" class="log-link">Task Log</a>
-            <a href="/groups/{{.Group.ID}}/purchases/log" class="log-link">Market Log</a>
+            <a href="/groups/{{.Group.ID}}/tasks/log" class="log-link">{{t .Locale "logs.task.title"}}</a>
+            <a href="/groups/{{.Group.ID}}/purchases/log" class="log-link">{{t .Locale "logs.market.title"}}</a>
         </div>
         <div class="group-topbar-right">
             <div class="balance-display">
-                <span class="balance-label">Cheese Stash</span>
+                <span class="balance-label">{{t .Locale "nav.cheese"}}</span>
                 <span class="balance-amount cheese-pill" data-cheese="{{.Balance}}" data-no-animate="true">🧀 {{.Balance}}</span>
             </div>
         </div>
@@ -72,11 +72,11 @@
                     </div>
                     <div class="form-group quest-checkbox-row" data-one-time-group="create">
                         <label class="quest-checkbox">
-                            <input type="checkbox" name="is_one_time" id="is_one_time">
+                            <input type="checkbox" name="is_one_time" id="is_one_time" checked>
                             <span class="quest-checkbox-box"></span>
-                            <span class="quest-checkbox-label">Remove quest after completion</span>
+                            <span class="quest-checkbox-label">One-time quest (remove after completion)</span>
                         </label>
-                        <span class="checkbox-hint">Auto-enabled for one-time quests.</span>
+                        <span class="checkbox-hint">Recommended: auto-removes completed quests.</span>
                     </div>
                     <button type="submit" class="btn btn-primary">Create Quest</button>
                 </form>
@@ -86,19 +86,37 @@
             <div class="tasks-list">
                 {{range .Tasks}}
                 <div class="task-item">
-                    <div class="task-info">
-                        <h4>{{.Title}}</h4>
-                        {{if .Description}}
-                        <p class="text-muted">{{.Description}}</p>
-                        {{end}}
-                        <div class="task-badges">
-                            <span class="cheese-tag reward-pill total-reward-tag" data-cheese="{{.RewardValue}}" data-base-cheese="{{.RewardValue}}" data-task-type="{{.TaskType}}">🧀 {{.RewardValue}}</span>
-                            {{if eq .TaskType "integer"}}
-                            <span class="pill-tag per-unit-tag">Per unit</span>
-                            {{else}}
-                            <span class="pill-tag soft-tag">One-time</span>
+                    <div class="task-top-row">
+                        <div class="task-info">
+                            <h4>{{.Title}}</h4>
+                            {{if .Description}}
+                            <p class="text-muted">{{.Description}}</p>
                             {{end}}
-                            {{if .IsOneTime}}<span class="pill-tag one-time-tag">Auto-removes</span>{{end}}
+                            <div class="task-badges">
+                                <span class="cheese-tag reward-pill total-reward-tag" data-cheese="{{.RewardValue}}" data-base-cheese="{{.RewardValue}}" data-task-type="{{.TaskType}}">🧀 {{.RewardValue}}</span>
+                                {{if eq .TaskType "integer"}}
+                                <span class="pill-tag per-unit-tag">Per unit</span>
+                                {{else}}
+                                <span class="pill-tag soft-tag">One-time</span>
+                                {{end}}
+                                {{if .IsOneTime}}<span class="pill-tag one-time-tag">Auto-removes</span>{{end}}
+                            </div>
+                        </div>
+                        <div class="task-edit-actions top-actions">
+                            <button onclick="toggleEditTask('{{.ID}}')" class="btn-icon" title="Edit">
+                                <span class="icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm3.92 1.33-1.5 1.5H4.5v-.92l8.06-8.06 2.42 2.42L6.92 18.58ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>
+                                </span>
+                                <span class="sr-only">Edit</span>
+                            </button>
+                            <form method="POST" action="/tasks/{{.ID}}/delete" style="display: inline;" onsubmit="return confirm('Delete this task?');">
+                                <button type="submit" class="btn-icon" title="Delete">
+                                    <span class="icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h5a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6H3a1 1 0 1 1 0-2h5Zm2 0h2V3h-2v1Zm7 2H6v13h12V6ZM9 9a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1Zm6 0a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1ZM12 9a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1Z"/></svg>
+                                    </span>
+                                    <span class="sr-only">Delete</span>
+                                </button>
+                            </form>
                         </div>
                     </div>
                     <div class="task-actions">
@@ -117,22 +135,6 @@
                                 <span>Finish Quest</span>
                             </button>
                         </form>
-                        <div class="task-edit-actions">
-                            <button onclick="toggleEditTask('{{.ID}}')" class="btn-icon" title="Edit">
-                                <span class="icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25Zm3.92 1.33-1.5 1.5H4.5v-.92l8.06-8.06 2.42 2.42L6.92 18.58ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"/></svg>
-                                </span>
-                                <span class="sr-only">Edit</span>
-                            </button>
-                            <form method="POST" action="/tasks/{{.ID}}/delete" style="display: inline;" onsubmit="return confirm('Delete this task?');">
-                                <button type="submit" class="btn-icon" title="Delete">
-                                    <span class="icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h5a1 1 0 1 1 0 2h-1v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6H3a1 1 0 1 1 0-2h5Zm2 0h2V3h-2v1Zm7 2H6v13h12V6ZM9 9a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1Zm6 0a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1ZM12 9a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0v-7a1 1 0 0 1 1-1Z"/></svg>
-                                    </span>
-                                    <span class="sr-only">Delete</span>
-                                </button>
-                            </form>
-                        </div>
                     </div>
                     <div id="edit-task-{{.ID}}" class="edit-form" style="display: none;">
                         <form method="POST" action="/tasks/{{.ID}}/update" class="form quest-form" data-quest-scope="edit-{{.ID}}">
@@ -352,6 +354,10 @@ function handleQuestTypeChange(scope) {
             checkbox.disabled = true;
             checkboxRow.classList.add('auto-on');
         } else {
+            // For integer type, check by default but allow toggling
+            if (!checkbox.hasAttribute('data-user-interacted')) {
+                checkbox.checked = true;
+            }
             checkbox.disabled = false;
             checkboxRow.classList.remove('auto-on');
         }
@@ -381,6 +387,13 @@ document.addEventListener('DOMContentLoaded', function () {
         window.ratpgUI.initQuantityTotals();
         window.ratpgUI.initActionAnimations();
     }
+
+    // Add event listeners to track user interactions with checkboxes
+    document.querySelectorAll('.quest-checkbox input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            this.setAttribute('data-user-interacted', 'true');
+        });
+    });
 
     document.querySelectorAll('.quest-form').forEach((form) => {
         const scope = form.dataset.questScope;

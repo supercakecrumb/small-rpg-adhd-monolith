@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="auth-container">
     <div class="auth-card">
-        <h2>🔐 Login</h2>
+        <h2>🔐 {{t .Locale "login.title"}}</h2>
         
         {{if .Error}}
         <div class="alert alert-error">{{.Error}}</div>
@@ -9,16 +9,16 @@
 
         <form method="POST" action="/login" class="form">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">{{t .Locale "login.username"}}</label>
                 <input type="text" id="username" name="username" required 
                        placeholder="Enter your username" autofocus>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Login</button>
+            <button type="submit" class="btn btn-primary btn-block">{{t .Locale "login.submit"}}</button>
         </form>
 
         <div class="auth-footer">
-            <p>Don't have an account? <a href="/register">Register here</a></p>
+            <p>{{t .Locale "login.register_hint"}} <a href="/register">{{t .Locale "login.register_link"}}</a></p>
         </div>
     </div>
 </div>

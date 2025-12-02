@@ -18,6 +18,7 @@ func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔑 handleLoginPage called: %s %s", r.Method, r.URL.Path)
 	log.Printf("   Remote Address: %s", r.RemoteAddr)
 	log.Printf("   User-Agent: %s", r.UserAgent())
+	locale := s.detectLocale(r)
 
 	// Check if user is already logged in
 	if userID, ok := s.getUserID(r); ok {
@@ -27,13 +28,14 @@ func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("   ❌ User not authenticated, rendering login page")
-	s.renderTemplate(w, "login.html", loginPageData{})
+	s.renderTemplate(w, "login.html", loginPageData{basePageData: basePageData{Locale: locale}})
 }
 
 // handleHashLogin processes hash-based login from Telegram bot
 // URL format: /login?user=<username>&hash=<hmac>
 func (s *Server) handleHashLogin(w http.ResponseWriter, r *http.Request) {
 	log.Printf("🔐 handleHashLogin called: %s %s", r.Method, r.URL.Path)
+	locale := s.detectLocale(r)
 
 	// Check if user is already logged in
 	if userID, ok := s.getUserID(r); ok {
@@ -48,7 +50,7 @@ func (s *Server) handleHashLogin(w http.ResponseWriter, r *http.Request) {
 
 	if username == "" || providedHash == "" {
 		log.Printf("   ❌ Missing username or hash")
-		s.renderTemplate(w, "login.html", loginPageData{Error: "Invalid login link. Please use the link from Telegram bot."})
+		s.renderTemplate(w, "login.html", loginPageData{basePageData: basePageData{Locale: locale}, Error: "Invalid login link. Please use the link from Telegram bot."})
 		return
 	}
 
@@ -56,7 +58,7 @@ func (s *Server) handleHashLogin(w http.ResponseWriter, r *http.Request) {
 	expectedHash := s.generateLoginHash(username)
 	if !hmac.Equal([]byte(providedHash), []byte(expectedHash)) {
 		log.Printf("   ❌ Invalid hash for user: %s", username)
-		s.renderTemplate(w, "login.html", loginPageData{Error: "Invalid or expired login link. Please request a new one from the Telegram bot."})
+		s.renderTemplate(w, "login.html", loginPageData{basePageData: basePageData{Locale: locale}, Error: "Invalid or expired login link. Please request a new one from the Telegram bot."})
 		return
 	}
 
@@ -64,14 +66,14 @@ func (s *Server) handleHashLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := s.service.GetUserByUsername(username)
 	if err != nil {
 		log.Printf("   ❌ User not found: %s, error: %v", username, err)
-		s.renderTemplate(w, "login.html", loginPageData{Error: "User not found. Please start the Telegram bot first with /start"})
+		s.renderTemplate(w, "login.html", loginPageData{basePageData: basePageData{Locale: locale}, Error: "User not found. Please start the Telegram bot first with /start"})
 		return
 	}
 
 	// Set session
 	if err := s.setUserID(w, r, user.ID); err != nil {
 		log.Printf("   ❌ Failed to create session: %v", err)
-		s.renderTemplate(w, "login.html", loginPageData{Error: "Failed to create session"})
+		s.renderTemplate(w, "login.html", loginPageData{basePageData: basePageData{Locale: locale}, Error: "Failed to create session"})
 		return
 	}
 

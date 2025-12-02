@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"small-rpg-adhd-monolith/internal/core"
+	"small-rpg-adhd-monolith/internal/i18n"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -25,6 +27,7 @@ func getEnv(key, defaultValue string) string {
 
 const sessionName = "small-rpg-session"
 const sessionUserIDKey = "user_id"
+const sessionLocaleKey = "locale"
 
 // Server represents the HTTP server
 type Server struct {
@@ -32,6 +35,7 @@ type Server struct {
 	sessionStore  *sessions.CookieStore
 	templates     *template.Template
 	sessionSecret string
+	translator    *i18n.Translator
 }
 
 // NewServer creates a new Server instance
@@ -63,12 +67,24 @@ func NewServer(service *core.Service, sessionSecret string) (*Server, error) {
 
 	log.Printf("Template parsing will happen on-demand for each page")
 
+	translator, err := i18n.NewTranslator("locales", "en")
+	if err != nil {
+		log.Printf("⚠️ Failed to load locales: %v", err)
+		translator = i18n.NewFallback("en")
+	}
+
 	return &Server{
 		service:       service,
 		sessionStore:  store,
 		templates:     nil, // Will be nil, parse on-demand instead
 		sessionSecret: sessionSecret,
+		translator:    translator,
 	}, nil
+}
+
+// Translator exposes the i18n translator (useful for other services like the bot).
+func (s *Server) Translator() *i18n.Translator {
+	return s.translator
 }
 
 // Router creates and configures the HTTP router
@@ -88,6 +104,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/", s.handleHome)
 	r.Get("/login", s.handleLoginPage)
 	r.Get("/auth", s.handleHashLogin) // Hash-based login from Telegram
+	r.Get("/locale", s.handleSetLocale)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
@@ -124,6 +141,34 @@ func (s *Server) Router() http.Handler {
 	return r
 }
 
+// detectLocale picks locale from session then Accept-Language with fallback to default.
+func (s *Server) detectLocale(r *http.Request) string {
+	if session, err := s.sessionStore.Get(r, sessionName); err == nil {
+		if l, ok := session.Values[sessionLocaleKey].(string); ok && l != "" {
+			return l
+		}
+	}
+	al := r.Header.Get("Accept-Language")
+	if strings.HasPrefix(strings.ToLower(al), "ru") {
+		return "ru"
+	}
+	return "en"
+}
+
+// handleSetLocale stores locale in session and redirects back.
+func (s *Server) handleSetLocale(w http.ResponseWriter, r *http.Request) {
+	lang := r.URL.Query().Get("lang")
+	if lang != "ru" && lang != "en" {
+		lang = "en"
+	}
+	_ = s.setLocale(w, r, lang)
+	ref := r.Header.Get("Referer")
+	if ref == "" {
+		ref = "/"
+	}
+	http.Redirect(w, r, ref, http.StatusSeeOther)
+}
+
 // getUserID retrieves the user ID from the session
 func (s *Server) getUserID(r *http.Request) (int64, bool) {
 	log.Printf("🔍 getUserID called for %s %s", r.Method, r.URL.Path)
@@ -151,6 +196,16 @@ func (s *Server) setUserID(w http.ResponseWriter, r *http.Request, userID int64)
 	}
 
 	session.Values[sessionUserIDKey] = userID
+	return session.Save(r, w)
+}
+
+// setLocale sets the preferred locale in session.
+func (s *Server) setLocale(w http.ResponseWriter, r *http.Request, locale string) error {
+	session, err := s.sessionStore.Get(r, sessionName)
+	if err != nil {
+		return err
+	}
+	session.Values[sessionLocaleKey] = locale
 	return session.Save(r, w)
 }
 
@@ -190,7 +245,16 @@ func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interfa
 	layoutPath := filepath.Join("templates", "layout.html")
 	pagePath := filepath.Join("templates", name)
 
-	tmpl, err := template.ParseFiles(layoutPath, pagePath)
+	funcMap := template.FuncMap{
+		"t": func(locale, key string) string {
+			if s.translator == nil {
+				return key
+			}
+			return s.translator.T(locale, key)
+		},
+	}
+
+	tmpl, err := template.New(filepath.Base(layoutPath)).Funcs(funcMap).ParseFiles(layoutPath, pagePath)
 	if err != nil {
 		log.Printf("ERROR parsing templates for %s: %v", name, err)
 		http.Error(w, fmt.Sprintf("Template parsing error: %v", err), http.StatusInternalServerError)

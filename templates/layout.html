@@ -25,26 +25,39 @@
                     {{if .Group}}
                         {{.Group.Name}}
                     {{else}}
-                        The Burrow
+                        {{t .Locale "nav.burrow"}}
                     {{end}}
                 </span>
             </div>
-            {{if .Username}}
             <div class="nav-links">
+                {{if .Username}}
                 <div class="user-chip">
                     <span class="avatar-emoji" data-username="{{.Username}}"></span>
                     <div class="user-chip-text">
                         <span class="username">{{.Username}}</span>
-                        <span class="user-chip-subtle">in the Burrow</span>
+                        <span class="user-chip-subtle">{{t .Locale "nav.username_tag"}}</span>
                     </div>
                 </div>
-                {{if .Group}}
-                <span class="cheese-pill" data-cheese="{{.Balance}}" data-no-animate="true">🧀 {{.Balance}}</span>
+                <a href="/locale?lang={{if eq .Locale "ru"}}en{{else}}ru{{end}}" class="btn btn-outline btn-xs locale-toggle">
+                    {{if eq .Locale "ru"}}РУ{{else}}EN{{end}}
+                </a>
+                <a href="/dashboard" class="btn btn-secondary btn-xs">{{t .Locale "nav.dashboard"}}</a>
+                <a href="/logout" class="btn btn-outline btn-xs logout-btn" title="{{t .Locale "nav.logout"}}">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                            <path d="M9 12h12l-3 -3" />
+                            <path d="M18 15l3 -3" />
+                        </svg>
+                    </span>
+                </a>
+                {{else}}
+                <a href="/locale?lang={{if eq .Locale "ru"}}en{{else}}ru{{end}}" class="btn btn-outline btn-xs locale-toggle">
+                    {{if eq .Locale "ru"}}РУ{{else}}EN{{end}}
+                </a>
                 {{end}}
-                <a href="/dashboard" class="btn btn-secondary">The Burrow</a>
-                <a href="/logout" class="btn btn-outline">Logout</a>
             </div>
-            {{end}}
         </div>
     </nav>
 

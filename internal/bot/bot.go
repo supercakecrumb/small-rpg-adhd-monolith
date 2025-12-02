@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"small-rpg-adhd-monolith/internal/core"
+	"small-rpg-adhd-monolith/internal/i18n"
 
 	tele "gopkg.in/telebot.v3"
 )
@@ -23,10 +24,28 @@ type Bot struct {
 	publicURL     string
 	sessionSecret string
 	token         string
+	translator    *i18n.Translator
+}
+
+func (b *Bot) lang(ctx tele.Context) string {
+	if ctx == nil || ctx.Sender() == nil || ctx.Sender().LanguageCode == "" {
+		return "en"
+	}
+	if strings.HasPrefix(strings.ToLower(ctx.Sender().LanguageCode), "ru") {
+		return "ru"
+	}
+	return "en"
+}
+
+func (b *Bot) t(lang, key string) string {
+	if b.translator == nil {
+		return key
+	}
+	return b.translator.T(lang, key)
 }
 
 // NewBot creates a new Bot instance
-func NewBot(token string, service *core.Service, sessionSecret string) (*Bot, error) {
+func NewBot(token string, service *core.Service, sessionSecret string, translator *i18n.Translator) (*Bot, error) {
 	pref := tele.Settings{
 		Token:  token,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
@@ -52,6 +71,7 @@ func NewBot(token string, service *core.Service, sessionSecret string) (*Bot, er
 		publicURL:     publicURL,
 		sessionSecret: sessionSecret,
 		token:         token,
+		translator:    translator,
 	}
 
 	bot.setupHandlers()
@@ -90,6 +110,7 @@ func (b *Bot) handleStart(c tele.Context) error {
 	if username == "" {
 		username = c.Sender().FirstName
 	}
+	lang := b.lang(c)
 
 	// Check if user already exists
 	user, err := b.service.GetUserByTelegramID(telegramID)
@@ -98,17 +119,7 @@ func (b *Bot) handleStart(c tele.Context) error {
 		b.updateUserPhoto(user.ID, telegramID)
 
 		// Welcome them back
-		return c.Send(fmt.Sprintf(
-			"🎮 Welcome back, %s! Ready to conquer some tasks?\n\n"+
-				"Quick commands:\n"+
-				"💰 /balance - Check your coins\n"+
-				"📋 /tasks - Complete tasks & earn rewards\n"+
-				"🌐 /web - Access the Web UI\n"+
-				"🔔 /notifications - Manage notifications\n"+
-				"❓ /help - Show all commands\n\n"+
-				"Let's get those dopamine hits! 🚀",
-			user.Username,
-		))
+		return c.Send(fmt.Sprintf(b.t(lang, "bot.start.returning"), user.Username))
 	}
 
 	// User doesn't exist, create new user
@@ -122,54 +133,25 @@ func (b *Bot) handleStart(c tele.Context) error {
 	// Fetch and cache profile photo for new user
 	b.updateUserPhoto(newUser.ID, telegramID)
 
-	return c.Send(fmt.Sprintf(
-		"🎉 Welcome to the ADHD Quest System, %s!\n\n"+
-			"You've just unlocked:\n"+
-			"✨ A gamified way to crush your tasks\n"+
-			"🪙 Coin rewards for every win\n"+
-			"🎯 Group challenges with friends\n\n"+
-			"💡 Quick start:\n"+
-			"1. Use /web to access the Web UI\n"+
-			"2. Create or join a group\n"+
-			"3. Use /tasks to start earning coins\n"+
-			"4. Level up your productivity! 🚀\n\n"+
-			"Need help? Type /help for all commands\n"+
-			"Pro tip: Small wins add up to big victories! 💪",
-		newUser.Username,
-	))
+	return c.Send(fmt.Sprintf(b.t(lang, "bot.start.new"), newUser.Username))
 }
 
 // handleWeb handles the /web command
 func (b *Bot) handleWeb(c tele.Context) error {
 	telegramID := c.Sender().ID
+	lang := b.lang(c)
 
 	// Get user by Telegram ID
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err != nil {
-		return c.Send(
-			"❌ I don't know you yet! Please use /start first to register.",
-		)
+		return c.Send(b.t(lang, "bot.web.unknown"))
 	}
 
 	// Generate login hash
 	loginHash := b.generateLoginHash(user.Username)
 	loginURL := fmt.Sprintf("%s/auth?user=%s&hash=%s", b.publicURL, user.Username, loginHash)
 
-	return c.Send(fmt.Sprintf(
-		"🌐 Web UI Access\n\n"+
-			"Click the link below to log in:\n"+
-			"🔗 %s\n\n"+
-			"📝 This secure link will:\n"+
-			"• Log you into the web interface automatically\n"+
-			"• Give you access to all your groups and tasks\n"+
-			"• Let you manage tasks, shop items, and more\n\n"+
-			"⚠️ Security note:\n"+
-			"This link is unique to you and should not be shared.\n"+
-			"It will remain valid until you request a new one.\n\n"+
-			"💡 Tip: Use the web UI to manage your groups,\n"+
-			"then come back here to quickly complete tasks! ✨",
-		loginURL,
-	))
+	return c.Send(fmt.Sprintf(b.t(lang, "bot.web.access"), loginURL))
 }
 
 // generateLoginHash generates an HMAC-SHA256 hash for username
@@ -181,23 +163,8 @@ func (b *Bot) generateLoginHash(username string) string {
 
 // handleHelp handles the /help command
 func (b *Bot) handleHelp(c tele.Context) error {
-	return c.Send(
-		"🤖 RatPG - Command Guide\n\n" +
-			"Basic Commands:\n" +
-			"🏁 /start - Register & get started\n" +
-			"❓ /help - Show this help message\n" +
-			"🌐 /web - Get Web UI access link\n\n" +
-			"Game Commands:\n" +
-			"💰 /balance - Check your coin balance\n" +
-			"📋 /tasks - Browse & complete tasks\n" +
-			"🔔 /notifications - Manage notifications\n\n" +
-			"How it works:\n" +
-			"1. Create or join groups via the Web UI\n" +
-			"2. Tasks and shop items are managed on the web\n" +
-			"3. Use the bot for quick task completion\n" +
-			"4. Earn coins and spend them in the shop!\n\n" +
-			"Need more help? Visit the Web UI for full features! 🚀",
-	)
+	lang := b.lang(c)
+	return c.Send(b.t(lang, "bot.help"))
 }
 
 // handleBalance handles the /balance command

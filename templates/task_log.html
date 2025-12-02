@@ -10,12 +10,12 @@
         </div>
     </div>
     <div class="group-topbar-center">
-        <a href="/groups/{{.Group.ID}}/tasks/log" class="log-link active">Task Log</a>
-        <a href="/groups/{{.Group.ID}}/purchases/log" class="log-link">Market Log</a>
+        <a href="/groups/{{.Group.ID}}/tasks/log" class="log-link active">{{t .Locale "logs.task.title"}}</a>
+        <a href="/groups/{{.Group.ID}}/purchases/log" class="log-link">{{t .Locale "logs.market.title"}}</a>
     </div>
     <div class="group-topbar-right">
         <div class="balance-display">
-            <span class="balance-label">Cheese Stash</span>
+            <span class="balance-label">{{t .Locale "nav.cheese"}}</span>
             <span class="balance-amount cheese-pill" data-cheese="{{.Balance}}" data-no-animate="true">🧀 {{.Balance}}</span>
         </div>
     </div>
@@ -24,7 +24,7 @@
 {{if .Log}}
     <div class="card">
         <div class="card-header">
-            <h3>Completed Quests</h3>
+            <h3>{{t .Locale "logs.task.title"}}</h3>
         </div>
         {{range .Log}}
             <div class="history-item">
@@ -40,8 +40,8 @@
                         <span class="text-muted">{{.Transaction.CreatedAt.Format "Jan 2, 15:04"}}</span>
                         <form method="post" action="/transactions/{{.Transaction.ID}}/undo" style="display: inline;">
                             <input type="hidden" name="group_id" value="{{$.Group.ID}}">
-                            <button type="submit" class="btn btn-sm btn-outline" title="Undo this quest completion">
-                                ↺ Undo
+                            <button type="submit" class="btn btn-sm btn-outline" title="{{t $.Locale "logs.task.undo"}}">
+                                ↺ {{t $.Locale "logs.task.undo"}}
                             </button>
                         </form>
                     </div>

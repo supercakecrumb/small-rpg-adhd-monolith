@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="dashboard">
     <div class="page-header">
-        <h2>🧀 Welcome to the Burrow, {{.Username}}!</h2>
+        <h2><span class="emoji-icon">🪄</span> {{printf (t .Locale "dashboard.welcome") .Username}}</h2>
     </div>
 
     {{if .Error}}
@@ -10,11 +10,7 @@
 
     <div class="card">
         <div class="card-header-with-tooltip">
-            <h3>Your Parties</h3>
-            <button class="info-tooltip-trigger" aria-label="Info about parties">
-                <span class="info-icon">ⓘ</span>
-                <span class="info-tooltip">Parties are shared quest boards for you and others</span>
-            </button>
+            <h3>{{t .Locale "dashboard.parties"}}</h3>
         </div>
         
         {{if .Groups}}
@@ -27,32 +23,32 @@
             {{end}}
         </div>
         {{else}}
-        <p class="empty-state">You're not in any parties yet. Create one or join using an invite code!</p>
+        <p class="empty-state">{{t .Locale "dashboard.parties.empty"}}</p>
         {{end}}
     </div>
 
     <div class="actions-grid">
         <div class="card">
-            <h3>➕ Create New Party</h3>
+            <h3>➕ {{t .Locale "dashboard.create.title"}}</h3>
             <form method="POST" action="/groups/create" class="form">
                 <div class="form-group">
-                    <label for="name">Party Name</label>
+                    <label for="name">{{t .Locale "dashboard.create.name"}}</label>
                     <input type="text" id="name" name="name" required 
                            placeholder="e.g., Cozy Quest Crew">
                 </div>
-                <button type="submit" class="btn btn-primary">Create Party</button>
+                <button type="submit" class="btn btn-primary">{{t .Locale "dashboard.create.submit"}}</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>🔗 Join Party</h3>
+            <h3>🔗 {{t .Locale "dashboard.join.title"}}</h3>
             <form method="POST" action="/groups/join" class="form">
                 <div class="form-group">
-                    <label for="invite_code">Invite Code</label>
+                    <label for="invite_code">{{t .Locale "dashboard.join.invite"}}</label>
                     <input type="text" id="invite_code" name="invite_code" required 
                            placeholder="Enter invite code">
                 </div>
-                <button type="submit" class="btn btn-secondary">Join Party</button>
+                <button type="submit" class="btn btn-secondary">{{t .Locale "dashboard.join.submit"}}</button>
             </form>
         </div>
     </div>
@@ -61,42 +57,42 @@
         <div class="edu-header">
             <div>
                 <p class="eyebrow">Cozy Loop</p>
-                <h3>How the Burrow Works</h3>
-                <p class="text-muted">A visual map so you know where to start.</p>
+                <h3>{{t .Locale "dashboard.edu.title"}}</h3>
+                <p class="text-muted">{{t .Locale "dashboard.edu.subtitle"}}</p>
             </div>
-            <div class="edu-chip">Soft focus · No overwhelm</div>
+            <div class="edu-chip">{{t .Locale "dashboard.edu.chip"}}</div>
         </div>
 
         <div class="edu-journey">
             <div class="journey-step">
                 <div class="journey-icon">🧭</div>
                 <div class="journey-body">
-                    <h4>Create Quest</h4>
-                    <p class="text-muted">Pick one-time or countable, keep it tiny.</p>
+                    <h4>{{t .Locale "dashboard.edu.loop.create.title"}}</h4>
+                    <p class="text-muted">{{t .Locale "dashboard.edu.loop.create.desc"}}</p>
                 </div>
             </div>
             <div class="journey-arrow">→</div>
             <div class="journey-step">
                 <div class="journey-icon">✅</div>
                 <div class="journey-body">
-                    <h4>Complete</h4>
-                    <p class="text-muted">Tap finish, log the win.</p>
+                    <h4>{{t .Locale "dashboard.edu.loop.complete.title"}}</h4>
+                    <p class="text-muted">{{t .Locale "dashboard.edu.loop.complete.desc"}}</p>
                 </div>
             </div>
             <div class="journey-arrow">→</div>
             <div class="journey-step">
                 <div class="journey-icon">🧀</div>
                 <div class="journey-body">
-                    <h4>Earn Cheese</h4>
-                    <p class="text-muted">Cheese rises with effort, not perfection.</p>
+                    <h4>{{t .Locale "dashboard.edu.loop.earn.title"}}</h4>
+                    <p class="text-muted">{{t .Locale "dashboard.edu.loop.earn.desc"}}</p>
                 </div>
             </div>
             <div class="journey-arrow">→</div>
             <div class="journey-step">
                 <div class="journey-icon">🛍️</div>
                 <div class="journey-body">
-                    <h4>Buy Rewards</h4>
-                    <p class="text-muted">Trade cheese for treats you chose.</p>
+                    <h4>{{t .Locale "dashboard.edu.loop.redeem.title"}}</h4>
+                    <p class="text-muted">{{t .Locale "dashboard.edu.loop.redeem.desc"}}</p>
                 </div>
             </div>
         </div>
@@ -104,23 +100,23 @@
         <div class="edu-grid">
             <div class="edu-card">
                 <div class="edu-icon">✨</div>
-                <h4>What is RatPG?</h4>
-                <p>A soft, dark burrow for quests. Zero neon, zero noise.</p>
+                <h4>{{t .Locale "dashboard.edu.card.what.title"}}</h4>
+                <p>{{t .Locale "dashboard.edu.card.what.desc"}}</p>
             </div>
             <div class="edu-card">
                 <div class="edu-icon">🎯</div>
-                <h4>Quests</h4>
-                <p>Clear labels; either one-time or countable. No clutter.</p>
+                <h4>{{t .Locale "dashboard.edu.card.quest.title"}}</h4>
+                <p>{{t .Locale "dashboard.edu.card.quest.desc"}}</p>
             </div>
             <div class="edu-card">
                 <div class="edu-icon">🫂</div>
-                <h4>Party</h4>
-                <p>Invite partners with your code. Shared quests, shared wins.</p>
+                <h4>{{t .Locale "dashboard.edu.card.party.title"}}</h4>
+                <p>{{t .Locale "dashboard.edu.card.party.desc"}}</p>
             </div>
             <div class="edu-card">
                 <div class="edu-icon">📨</div>
-                <h4>Invite Flow</h4>
-                <p>Drop the code, they land directly in your group.</p>
+                <h4>{{t .Locale "dashboard.edu.card.invite.title"}}</h4>
+                <p>{{t .Locale "dashboard.edu.card.invite.desc"}}</p>
             </div>
         </div>
     </div>

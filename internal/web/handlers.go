@@ -14,6 +14,7 @@ type basePageData struct {
 	Username     string
 	UserPhotoURL string
 	Group        *core.Group
+	Locale       string
 }
 
 type dashboardData struct {
@@ -33,9 +34,10 @@ type groupViewData struct {
 	Success   string
 }
 
-func (s *Server) buildBasePageData(user *core.User) basePageData {
+func (s *Server) buildBasePageData(user *core.User, locale string) basePageData {
 	data := basePageData{
 		Username: user.Username,
+		Locale:   locale,
 	}
 
 	profile, err := s.service.GetUserProfile(user.ID)
@@ -54,6 +56,7 @@ func (s *Server) buildBasePageData(user *core.User) basePageData {
 // handleDashboard displays the user's dashboard with their groups
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
+	locale := s.detectLocale(r)
 
 	user, err := s.service.GetUserByID(userID)
 	if err != nil {
@@ -68,7 +71,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := dashboardData{
-		basePageData: s.buildBasePageData(user),
+		basePageData: s.buildBasePageData(user, locale),
 		Groups:       groups,
 	}
 
@@ -127,6 +130,7 @@ func (s *Server) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
 // handleGroupView displays a group's details
 func (s *Server) handleGroupView(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
+	locale := s.detectLocale(r)
 
 	groupIDStr := chi.URLParam(r, "groupID")
 	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
@@ -178,7 +182,7 @@ func (s *Server) handleGroupView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := groupViewData{
-		basePageData: s.buildBasePageData(user),
+		basePageData: s.buildBasePageData(user, locale),
 		Group:        group,
 		Tasks:        tasks,
 		ShopItems:    shopItems,
@@ -519,6 +523,7 @@ type taskLogData struct {
 // handleTaskLog displays task completion log
 func (s *Server) handleTaskLog(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
+	locale := s.detectLocale(r)
 
 	groupIDStr := chi.URLParam(r, "groupID")
 	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
@@ -554,7 +559,7 @@ func (s *Server) handleTaskLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := taskLogData{
-		basePageData: s.buildBasePageData(user),
+		basePageData: s.buildBasePageData(user, locale),
 		Group:        group,
 		Log:          taskLog,
 		Balance:      balance,
@@ -574,6 +579,7 @@ type purchaseLogData struct {
 // handlePurchaseLog displays purchase log
 func (s *Server) handlePurchaseLog(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
+	locale := s.detectLocale(r)
 
 	groupIDStr := chi.URLParam(r, "groupID")
 	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
@@ -608,7 +614,7 @@ func (s *Server) handlePurchaseLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := purchaseLogData{
-		basePageData: s.buildBasePageData(user),
+		basePageData: s.buildBasePageData(user, locale),
 		Group:        group,
 		Log:          log,
 		Balance:      balance,
