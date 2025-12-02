@@ -1,0 +1,173 @@
+{{define "content"}}
+<div class="container">
+    <div class="header">
+        <h1>🛒 Purchase History</h1>
+        <p class="subtitle">{{.Group.Name}}</p>
+    </div>
+
+    <div class="actions">
+        <a href="/groups/{{.Group.ID}}" class="btn btn-secondary">← Back to Group</a>
+    </div>
+
+    {{if .History}}
+    <div class="purchase-list">
+        {{range .History}}
+        <div class="purchase-item {{if .Purchase.Fulfilled}}fulfilled{{end}}">
+            <div class="purchase-header">
+                <div class="purchase-title">
+                    <strong>{{.ShopItem.Title}}</strong>
+                    {{if .Purchase.Fulfilled}}
+                    <span class="badge badge-success">✓ Fulfilled</span>
+                    {{else}}
+                    <span class="badge badge-warning">⏳ Pending</span>
+                    {{end}}
+                </div>
+                <div class="purchase-cost">
+                    <span class="coins-spent">-{{.ShopItem.Cost}} 🪙</span>
+                </div>
+            </div>
+            
+            {{if .ShopItem.Description}}
+            <div class="purchase-description">
+                {{.ShopItem.Description}}
+            </div>
+            {{end}}
+
+            <div class="purchase-meta">
+                <span class="purchase-date">{{.Purchase.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+                <span class="purchase-user">by {{.User.Username}}</span>
+            </div>
+
+            {{if .Purchase.Fulfilled}}
+            <div class="fulfillment-info">
+                <span>Fulfilled {{.Purchase.FulfilledAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+                {{if .Purchase.Notes}}
+                <div class="fulfillment-notes">Note: {{.Purchase.Notes}}</div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="purchase-actions">
+                <form method="POST" action="/purchases/{{.Purchase.ID}}/fulfill" style="display: inline;">
+                    <input type="hidden" name="group_id" value="{{$.Group.ID}}">
+                    <input type="text" name="notes" placeholder="Add a note (optional)" class="note-input">
+                    <button type="submit" class="btn btn-sm btn-success">Mark as Fulfilled</button>
+                </form>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="empty-state">
+        <p>🛍️ No purchases yet.</p>
+        <p class="empty-hint">Start earning coins and treat yourself!</p>
+    </div>
+    {{end}}
+</div>
+
+<style>
+.purchase-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.purchase-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s;
+}
+
+.purchase-item.fulfilled {
+    opacity: 0.7;
+    border-color: var(--success-color);
+}
+
+.purchase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.purchase-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.purchase-cost {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--danger-color);
+}
+
+.coins-spent {
+    color: var(--danger-color);
+}
+
+.purchase-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.purchase-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.purchase-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.note-input {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    margin-right: 8px;
+    flex: 1;
+    max-width: 300px;
+}
+
+.fulfillment-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--success-color);
+}
+
+.fulfillment-notes {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--text-secondary);
+}
+
+.empty-hint {
+    font-size: 14px;
+    margin-top: 8px;
+}
+</style>
+{{end}}

@@ -22,6 +22,7 @@ type Bot struct {
 	service       *core.Service
 	publicURL     string
 	sessionSecret string
+	token         string
 }
 
 // NewBot creates a new Bot instance
@@ -50,6 +51,7 @@ func NewBot(token string, service *core.Service, sessionSecret string) (*Bot, er
 		service:       service,
 		publicURL:     publicURL,
 		sessionSecret: sessionSecret,
+		token:         token,
 	}
 
 	bot.setupHandlers()
@@ -75,6 +77,7 @@ func (b *Bot) setupHandlers() {
 	b.bot.Handle("/help", b.handleHelp)
 	b.bot.Handle("/balance", b.handleBalance)
 	b.bot.Handle("/tasks", b.handleTasks)
+	b.bot.Handle("/notifications", b.handleNotifications)
 
 	// Callback handlers
 	b.bot.Handle(tele.OnCallback, b.handleCallback)
@@ -91,13 +94,17 @@ func (b *Bot) handleStart(c tele.Context) error {
 	// Check if user already exists
 	user, err := b.service.GetUserByTelegramID(telegramID)
 	if err == nil && user != nil {
-		// User exists, welcome them back
+		// User exists, update profile photo
+		b.updateUserPhoto(user.ID, telegramID)
+
+		// Welcome them back
 		return c.Send(fmt.Sprintf(
 			"🎮 Welcome back, %s! Ready to conquer some tasks?\n\n"+
 				"Quick commands:\n"+
 				"💰 /balance - Check your coins\n"+
 				"📋 /tasks - Complete tasks & earn rewards\n"+
 				"🌐 /web - Access the Web UI\n"+
+				"🔔 /notifications - Manage notifications\n"+
 				"❓ /help - Show all commands\n\n"+
 				"Let's get those dopamine hits! 🚀",
 			user.Username,
@@ -111,6 +118,9 @@ func (b *Bot) handleStart(c tele.Context) error {
 		log.Printf("Error creating user: %v", err)
 		return c.Send("❌ Oops! Something went wrong creating your account. Try again?")
 	}
+
+	// Fetch and cache profile photo for new user
+	b.updateUserPhoto(newUser.ID, telegramID)
 
 	return c.Send(fmt.Sprintf(
 		"🎉 Welcome to the ADHD Quest System, %s!\n\n"+
@@ -172,14 +182,15 @@ func (b *Bot) generateLoginHash(username string) string {
 // handleHelp handles the /help command
 func (b *Bot) handleHelp(c tele.Context) error {
 	return c.Send(
-		"🤖 ADHD Quest System - Command Guide\n\n" +
+		"🤖 RatPG - Command Guide\n\n" +
 			"Basic Commands:\n" +
 			"🏁 /start - Register & get started\n" +
 			"❓ /help - Show this help message\n" +
 			"🌐 /web - Get Web UI access link\n\n" +
 			"Game Commands:\n" +
 			"💰 /balance - Check your coin balance\n" +
-			"📋 /tasks - Browse & complete tasks\n\n" +
+			"📋 /tasks - Browse & complete tasks\n" +
+			"🔔 /notifications - Manage notifications\n\n" +
 			"How it works:\n" +
 			"1. Create or join groups via the Web UI\n" +
 			"2. Tasks and shop items are managed on the web\n" +
@@ -316,9 +327,49 @@ func (b *Bot) handleCallback(c tele.Context) error {
 		return b.handleTaskCompletion(c, id)
 	case "back_tasks":
 		return b.handleTasks(c)
+	case "notif":
+		return b.handleNotificationToggle(c, parts[1])
 	default:
 		return c.Respond(&tele.CallbackResponse{Text: "❌ Unknown action"})
 	}
+}
+
+// handleNotificationToggle handles notification preference toggling
+func (b *Bot) handleNotificationToggle(c tele.Context, action string) error {
+	telegramID := c.Sender().ID
+
+	// Get user
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		return c.Respond(&tele.CallbackResponse{Text: "❌ User not found"})
+	}
+
+	// Set notification preference
+	enabled := action == "enable"
+	err = b.service.SetNotificationEnabled(user.ID, enabled)
+	if err != nil {
+		log.Printf("Failed to update notification preference: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Failed to update settings"})
+	}
+
+	// Update message
+	status := "disabled"
+	emoji := "🔕"
+	if enabled {
+		status = "enabled"
+		emoji = "✅"
+	}
+
+	c.Edit(fmt.Sprintf(
+		"%s Notifications %s!\n\n"+
+			"You can change this anytime with /notifications",
+		emoji,
+		status,
+	))
+
+	return c.Respond(&tele.CallbackResponse{
+		Text: fmt.Sprintf("Notifications %s!", status),
+	})
 }
 
 // handleGroupSelection shows tasks for a selected group
@@ -438,7 +489,124 @@ func (b *Bot) handleTaskCompletion(c tele.Context, taskID int64) error {
 	c.Edit(responseMsg)
 
 	// Send callback response
-	return c.Respond(&tele.CallbackResponse{
+	err = c.Respond(&tele.CallbackResponse{
 		Text: fmt.Sprintf("✨ +%d coins!", transaction.Amount),
 	})
+
+	// Send notifications to other group members
+	b.notifyGroupMembers(task.GroupID, user.ID, fmt.Sprintf(
+		"🎉 %s completed: %s (+%d coins)",
+		user.Username,
+		task.Title,
+		transaction.Amount,
+	))
+
+	return err
+}
+
+// updateUserPhoto fetches and caches the user's Telegram profile photo
+func (b *Bot) updateUserPhoto(userID int64, telegramID int64) {
+	// Note: Profile photo fetching requires direct API access
+	// For now, we skip this functionality as telebot v3 doesn't provide ProfilePhotos method
+	// TODO: Implement using direct Telegram Bot API HTTP calls if needed
+	log.Printf("Profile photo fetching not yet implemented for user %d", userID)
+}
+
+// handleNotifications handles the /notifications command
+func (b *Bot) handleNotifications(c tele.Context) error {
+	telegramID := c.Sender().ID
+
+	// Get user
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		return c.Send("❌ I don't know you yet! Use /start to get registered.")
+	}
+
+	// Get current notification status
+	profile, err := b.service.GetUserProfile(user.ID)
+	currentStatus := "disabled"
+	if err == nil && profile != nil && profile.NotificationEnabled {
+		currentStatus = "enabled"
+	}
+
+	// Create inline keyboard for notification toggle
+	btnEnable := tele.InlineButton{
+		Text: "✅ Enable Notifications",
+		Data: "notif:enable",
+	}
+	btnDisable := tele.InlineButton{
+		Text: "🔕 Disable Notifications",
+		Data: "notif:disable",
+	}
+
+	markup := &tele.ReplyMarkup{
+		InlineKeyboard: [][]tele.InlineButton{
+			{btnEnable},
+			{btnDisable},
+		},
+	}
+
+	return c.Send(
+		fmt.Sprintf("🔔 Notification Settings\n\n"+
+			"Current status: %s\n\n"+
+			"When enabled, you'll receive notifications about:\n"+
+			"• Task completions by group members\n"+
+			"• Shop purchases in your groups\n"+
+			"• Activity updates\n\n"+
+			"Choose your preference:",
+			currentStatus,
+		),
+		markup,
+	)
+}
+
+// notifyGroupMembers sends notifications to all group members (except the actor)
+func (b *Bot) notifyGroupMembers(groupID, actorUserID int64, message string) {
+	// Get all members of the group
+	members, err := b.service.GetUsersByGroupID(groupID)
+	if err != nil {
+		log.Printf("Failed to get group members for notification: %v", err)
+		return
+	}
+
+	// Send notification to each member (except the actor)
+	for _, member := range members {
+		if member.ID == actorUserID {
+			continue // Skip the person who performed the action
+		}
+
+		// Check if user has notifications enabled
+		profile, err := b.service.GetUserProfile(member.ID)
+		if err != nil || profile == nil || !profile.NotificationEnabled {
+			continue // Skip if notifications disabled
+		}
+
+		// Check if user has a Telegram ID
+		if member.TelegramID == nil {
+			continue
+		}
+
+		// Send notification
+		_, err = b.bot.Send(&tele.User{ID: *member.TelegramID}, message)
+		if err != nil {
+			log.Printf("Failed to send notification to user %d: %v", member.ID, err)
+		}
+	}
+}
+
+// NotifyPurchase sends a notification about a purchase
+func (b *Bot) NotifyPurchase(groupID, buyerUserID int64, itemTitle string, cost int) {
+	buyer, err := b.service.GetUserByID(buyerUserID)
+	if err != nil {
+		return
+	}
+
+	message := fmt.Sprintf(
+		"🛍️ %s bought: %s (🪙 %d coins)",
+		buyer.Username,
+		itemTitle,
+		cost,
+	)
+
+	b.notifyGroupMembers(groupID, buyerUserID, message)
 }

@@ -316,3 +316,269 @@ func (s *Server) handleBuyItem(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Item purchased!", http.StatusSeeOther)
 }
+
+// handleUpdateTask updates an existing task
+func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
+	taskIDStr := chi.URLParam(r, "taskID")
+	taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get task to determine group for redirect
+	task, err := s.service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	title := r.FormValue("title")
+	description := r.FormValue("description")
+	taskTypeStr := r.FormValue("task_type")
+	rewardValueStr := r.FormValue("reward_value")
+
+	if title == "" || taskTypeStr == "" || rewardValueStr == "" {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error=Missing required fields", http.StatusSeeOther)
+		return
+	}
+
+	taskType := core.TaskType(taskTypeStr)
+	rewardValue, err := strconv.Atoi(rewardValueStr)
+	if err != nil || rewardValue <= 0 {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error=Invalid reward value", http.StatusSeeOther)
+		return
+	}
+
+	err = s.service.UpdateTask(taskID, title, description, taskType, rewardValue)
+	if err != nil {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?success=Task updated", http.StatusSeeOther)
+}
+
+// handleDeleteTask deletes a task
+func (s *Server) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
+	taskIDStr := chi.URLParam(r, "taskID")
+	taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get task to determine group for redirect
+	task, err := s.service.GetTaskByID(taskID)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	err = s.service.DeleteTask(taskID)
+	if err != nil {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?success=Task deleted", http.StatusSeeOther)
+}
+
+// handleUpdateShopItem updates an existing shop item
+func (s *Server) handleUpdateShopItem(w http.ResponseWriter, r *http.Request) {
+	itemIDStr := chi.URLParam(r, "itemID")
+	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get item to determine group for redirect
+	item, err := s.service.GetShopItemByID(itemID)
+	if err != nil {
+		http.Error(w, "Item not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	title := r.FormValue("title")
+	description := r.FormValue("description")
+	costStr := r.FormValue("cost")
+
+	if title == "" || costStr == "" {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error=Missing required fields", http.StatusSeeOther)
+		return
+	}
+
+	cost, err := strconv.Atoi(costStr)
+	if err != nil || cost <= 0 {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error=Invalid cost", http.StatusSeeOther)
+		return
+	}
+
+	err = s.service.UpdateShopItem(itemID, title, description, cost)
+	if err != nil {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Shop item updated", http.StatusSeeOther)
+}
+
+// handleDeleteShopItem deletes a shop item
+func (s *Server) handleDeleteShopItem(w http.ResponseWriter, r *http.Request) {
+	itemIDStr := chi.URLParam(r, "itemID")
+	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get item to determine group for redirect
+	item, err := s.service.GetShopItemByID(itemID)
+	if err != nil {
+		http.Error(w, "Item not found", http.StatusNotFound)
+		return
+	}
+
+	err = s.service.DeleteShopItem(itemID)
+	if err != nil {
+		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Shop item deleted", http.StatusSeeOther)
+}
+
+type taskHistoryData struct {
+	Username string
+	Group    *core.Group
+	History  []*core.TaskCompletionHistory
+}
+
+// handleTaskHistory displays task completion history
+func (s *Server) handleTaskHistory(w http.ResponseWriter, r *http.Request) {
+	userID, _ := s.getUserID(r)
+
+	groupIDStr := chi.URLParam(r, "groupID")
+	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := s.service.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, "Failed to load user", http.StatusInternalServerError)
+		return
+	}
+
+	group, err := s.service.GetGroupByID(groupID)
+	if err != nil {
+		http.Error(w, "Group not found", http.StatusNotFound)
+		return
+	}
+
+	history, err := s.service.GetTaskCompletionHistory(userID, groupID)
+	if err != nil {
+		http.Error(w, "Failed to load history", http.StatusInternalServerError)
+		return
+	}
+
+	data := taskHistoryData{
+		Username: user.Username,
+		Group:    group,
+		History:  history,
+	}
+
+	s.renderTemplate(w, "task_history.html", data)
+}
+
+type purchaseHistoryData struct {
+	Username string
+	Group    *core.Group
+	History  []*core.PurchaseHistory
+}
+
+// handlePurchaseHistory displays purchase history
+func (s *Server) handlePurchaseHistory(w http.ResponseWriter, r *http.Request) {
+	userID, _ := s.getUserID(r)
+
+	groupIDStr := chi.URLParam(r, "groupID")
+	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	user, err := s.service.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, "Failed to load user", http.StatusInternalServerError)
+		return
+	}
+
+	group, err := s.service.GetGroupByID(groupID)
+	if err != nil {
+		http.Error(w, "Group not found", http.StatusNotFound)
+		return
+	}
+
+	history, err := s.service.GetPurchaseHistory(userID, groupID)
+	if err != nil {
+		http.Error(w, "Failed to load history", http.StatusInternalServerError)
+		return
+	}
+
+	data := purchaseHistoryData{
+		Username: user.Username,
+		Group:    group,
+		History:  history,
+	}
+
+	s.renderTemplate(w, "purchase_history.html", data)
+}
+
+// handleMarkPurchaseFulfilled marks a purchase as fulfilled
+func (s *Server) handleMarkPurchaseFulfilled(w http.ResponseWriter, r *http.Request) {
+	userID, _ := s.getUserID(r)
+
+	purchaseIDStr := chi.URLParam(r, "purchaseID")
+	purchaseID, err := strconv.ParseInt(purchaseIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid purchase ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	notes := r.FormValue("notes")
+	groupIDStr := r.FormValue("group_id")
+
+	err = s.service.MarkPurchaseFulfilled(purchaseID, userID, notes)
+	if err != nil {
+		if groupIDStr != "" {
+			http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases?error="+err.Error(), http.StatusSeeOther)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if groupIDStr != "" {
+		http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases?success=Purchase marked as fulfilled", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	}
+}

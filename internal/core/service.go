@@ -27,17 +27,34 @@ type Store interface {
 	CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int) (*Task, error)
 	GetTaskByID(id int64) (*Task, error)
 	GetTasksByGroupID(groupID int64) ([]*Task, error)
+	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int) error
+	DeleteTask(id int64) error
 
 	// Shop operations
 	CreateShopItem(groupID int64, title, description string, cost int) (*ShopItem, error)
 	GetShopItemByID(id int64) (*ShopItem, error)
 	GetShopItemsByGroupID(groupID int64) ([]*ShopItem, error)
+	UpdateShopItem(id int64, title, description string, cost int) error
+	DeleteShopItem(id int64) error
 
 	// Transaction operations
-	CreateTransaction(userID, groupID int64, amount int, sourceType SourceType, sourceID *int64) (*Transaction, error)
+	CreateTransaction(userID, groupID int64, amount int, sourceType SourceType, sourceID *int64, quantity int) (*Transaction, error)
 	GetTransactionByID(id int64) (*Transaction, error)
 	GetTransactionsByUserAndGroup(userID, groupID int64) ([]*Transaction, error)
 	GetBalance(userID, groupID int64) (int, error)
+	GetTaskCompletionHistory(userID, groupID int64) ([]*TaskCompletionHistory, error)
+
+	// Purchase operations
+	CreatePurchase(transactionID, userID, groupID, shopItemID int64) (*Purchase, error)
+	GetPurchasesByUserAndGroup(userID, groupID int64) ([]*Purchase, error)
+	GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*PurchaseHistory, error)
+	MarkPurchaseFulfilled(purchaseID, fulfilledByUserID int64, notes string) error
+
+	// Profile operations
+	GetUserProfile(userID int64) (*UserProfile, error)
+	CreateOrUpdateUserProfile(userID int64, telegramPhotoURL string, notificationEnabled bool) error
+	UpdateTelegramPhoto(userID int64, photoURL string) error
+	SetNotificationEnabled(userID int64, enabled bool) error
 }
 
 // Service provides business logic for the application
@@ -173,16 +190,19 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 
 	// Calculate reward based on task type
 	var reward int
+	var finalQuantity int
 	switch task.TaskType {
 	case TaskTypeBoolean:
 		// For boolean tasks, always award the reward_value
 		reward = task.RewardValue
+		finalQuantity = 1
 	case TaskTypeInteger:
 		// For integer tasks, require quantity and multiply
 		if quantity == nil || *quantity <= 0 {
 			return nil, fmt.Errorf("quantity must be provided and positive for integer tasks")
 		}
 		reward = task.RewardValue * (*quantity)
+		finalQuantity = *quantity
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", task.TaskType)
 	}
@@ -194,12 +214,33 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 		reward,
 		SourceTypeTask,
 		&task.ID,
+		finalQuantity,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
 	return transaction, nil
+}
+
+// UpdateTask updates an existing task
+func (s *Service) UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int) error {
+	if title == "" {
+		return fmt.Errorf("task title cannot be empty")
+	}
+	if taskType != TaskTypeBoolean && taskType != TaskTypeInteger {
+		return fmt.Errorf("invalid task type: must be 'boolean' or 'integer'")
+	}
+	if rewardValue <= 0 {
+		return fmt.Errorf("reward value must be positive")
+	}
+
+	return s.store.UpdateTask(id, title, description, taskType, rewardValue)
+}
+
+// DeleteTask deletes a task
+func (s *Service) DeleteTask(id int64) error {
+	return s.store.DeleteTask(id)
 }
 
 // CreateShopItem creates a new shop item in a group
@@ -217,6 +258,23 @@ func (s *Service) CreateShopItem(groupID int64, title, description string, cost 
 // GetShopItemsByGroupID retrieves all shop items for a group
 func (s *Service) GetShopItemsByGroupID(groupID int64) ([]*ShopItem, error) {
 	return s.store.GetShopItemsByGroupID(groupID)
+}
+
+// UpdateShopItem updates an existing shop item
+func (s *Service) UpdateShopItem(id int64, title, description string, cost int) error {
+	if title == "" {
+		return fmt.Errorf("shop item title cannot be empty")
+	}
+	if cost <= 0 {
+		return fmt.Errorf("cost must be positive")
+	}
+
+	return s.store.UpdateShopItem(id, title, description, cost)
+}
+
+// DeleteShopItem deletes a shop item
+func (s *Service) DeleteShopItem(id int64) error {
+	return s.store.DeleteShopItem(id)
 }
 
 // BuyItem handles purchasing an item from the shop
@@ -252,12 +310,50 @@ func (s *Service) BuyItem(userID, itemID int64) (*Transaction, error) {
 		-item.Cost,
 		SourceTypeShopItem,
 		&item.ID,
+		1, // Always quantity 1 for shop purchases
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
+	// Create purchase record for tracking
+	purchase, err := s.store.CreatePurchase(transaction.ID, userID, item.GroupID, item.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create purchase record: %w", err)
+	}
+	_ = purchase // Purchase record created successfully
+
 	return transaction, nil
+}
+
+// GetTaskCompletionHistory retrieves task completion history
+func (s *Service) GetTaskCompletionHistory(userID, groupID int64) ([]*TaskCompletionHistory, error) {
+	return s.store.GetTaskCompletionHistory(userID, groupID)
+}
+
+// GetPurchaseHistory retrieves purchase history
+func (s *Service) GetPurchaseHistory(userID, groupID int64) ([]*PurchaseHistory, error) {
+	return s.store.GetPurchaseHistoryByUserAndGroup(userID, groupID)
+}
+
+// MarkPurchaseFulfilled marks a purchase as fulfilled
+func (s *Service) MarkPurchaseFulfilled(purchaseID, fulfilledByUserID int64, notes string) error {
+	return s.store.MarkPurchaseFulfilled(purchaseID, fulfilledByUserID, notes)
+}
+
+// GetUserProfile retrieves a user's profile
+func (s *Service) GetUserProfile(userID int64) (*UserProfile, error) {
+	return s.store.GetUserProfile(userID)
+}
+
+// UpdateTelegramPhoto updates a user's Telegram photo
+func (s *Service) UpdateTelegramPhoto(userID int64, photoURL string) error {
+	return s.store.UpdateTelegramPhoto(userID, photoURL)
+}
+
+// SetNotificationEnabled sets notification preferences
+func (s *Service) SetNotificationEnabled(userID int64, enabled bool) error {
+	return s.store.SetNotificationEnabled(userID, enabled)
 }
 
 // GetBalance retrieves the current balance for a user in a group

@@ -1,0 +1,104 @@
+{{define "content"}}
+<div class="container">
+    <div class="header">
+        <h1>📜 Task History</h1>
+        <p class="subtitle">{{.Group.Name}}</p>
+    </div>
+
+    <div class="actions">
+        <a href="/groups/{{.Group.ID}}" class="btn btn-secondary">← Back to Group</a>
+    </div>
+
+    {{if .History}}
+    <div class="history-list">
+        {{range .History}}
+        <div class="history-item">
+            <div class="history-header">
+                <div class="history-task">
+                    <strong>{{.Task.Title}}</strong>
+                    {{if eq .Task.TaskType "integer"}}
+                    <span class="badge badge-info">×{{.Transaction.Quantity}}</span>
+                    {{end}}
+                </div>
+                <div class="history-reward">
+                    <span class="coins">+{{.Transaction.Amount}} 🪙</span>
+                </div>
+            </div>
+            {{if .Task.Description}}
+            <div class="history-description">
+                {{.Task.Description}}
+            </div>
+            {{end}}
+            <div class="history-meta">
+                <span class="history-date">{{.Transaction.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+                <span class="history-user">by {{.User.Username}}</span>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="empty-state">
+        <p>📭 No tasks completed yet.</p>
+        <p class="empty-hint">Start completing tasks to build your history!</p>
+    </div>
+    {{end}}
+</div>
+
+<style>
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.history-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.history-task {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-reward {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--success-color);
+}
+
+.history-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.history-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--text-secondary);
+}
+
+.empty-hint {
+    font-size: 14px;
+    margin-top: 8px;
+}
+</style>
+{{end}}

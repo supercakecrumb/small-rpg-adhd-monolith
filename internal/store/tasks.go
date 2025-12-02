@@ -131,3 +131,59 @@ func (s *Store) GetShopItemsByGroupID(groupID int64) ([]*core.ShopItem, error) {
 
 	return items, nil
 }
+
+// UpdateTask updates a task's details
+func (s *Store) UpdateTask(id int64, title, description string, taskType core.TaskType, rewardValue int) error {
+	query := `
+		UPDATE tasks
+		SET title = ?, description = ?, task_type = ?, reward_value = ?
+		WHERE id = ?
+	`
+
+	_, err := s.DB.Exec(query, title, description, string(taskType), rewardValue, id)
+	if err != nil {
+		return fmt.Errorf("failed to update task: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteTask deletes a task
+func (s *Store) DeleteTask(id int64) error {
+	query := `DELETE FROM tasks WHERE id = ?`
+
+	_, err := s.DB.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateShopItem updates a shop item's details
+func (s *Store) UpdateShopItem(id int64, title, description string, cost int) error {
+	query := `
+		UPDATE shop_items
+		SET title = ?, description = ?, cost = ?
+		WHERE id = ?
+	`
+
+	_, err := s.DB.Exec(query, title, description, cost, id)
+	if err != nil {
+		return fmt.Errorf("failed to update shop item: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteShopItem deletes a shop item
+func (s *Store) DeleteShopItem(id int64) error {
+	query := `DELETE FROM shop_items WHERE id = ?`
+
+	_, err := s.DB.Exec(query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete shop item: %w", err)
+	}
+
+	return nil
+}

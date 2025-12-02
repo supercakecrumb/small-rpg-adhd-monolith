@@ -11,6 +11,11 @@
         </div>
     </div>
 
+    <div class="quick-links">
+        <a href="/groups/{{.Group.ID}}/tasks/history" class="quick-link">📜 Task History</a>
+        <a href="/groups/{{.Group.ID}}/purchases" class="quick-link">🛒 Purchase History</a>
+    </div>
+
     {{if .Success}}
     <div class="alert alert-success">{{.Success}}</div>
     {{end}}
@@ -63,15 +68,50 @@
                         {{if .Description}}
                         <p class="text-muted">{{.Description}}</p>
                         {{end}}
-                        <span class="badge badge-reward">🪙 {{.RewardValue}} coins{{if eq .TaskType "integer"}} per unit{{end}}</span>
-                        <span class="badge badge-type">{{.TaskType}}</span>
+                        <div class="task-badges">
+                            <span class="badge badge-reward">🪙 {{.RewardValue}}{{if eq .TaskType "integer"}} per unit{{end}}</span>
+                            <span class="badge badge-type">{{.TaskType}}</span>
+                        </div>
                     </div>
-                    <form method="POST" action="/tasks/{{.ID}}/complete" class="task-complete-form">
-                        {{if eq .TaskType "integer"}}
-                        <input type="number" name="quantity" min="1" placeholder="Qty" class="quantity-input" required>
-                        {{end}}
-                        <button type="submit" class="btn btn-success btn-sm">✓ Complete</button>
-                    </form>
+                    <div class="task-actions">
+                        <form method="POST" action="/tasks/{{.ID}}/complete" class="task-complete-form">
+                            {{if eq .TaskType "integer"}}
+                            <div class="quantity-stepper">
+                                <button type="button" class="stepper-btn" onclick="decrementQty(this)">−</button>
+                                <input type="number" name="quantity" min="1" value="1" class="quantity-input" required>
+                                <button type="button" class="stepper-btn" onclick="incrementQty(this)">+</button>
+                            </div>
+                            {{end}}
+                            <button type="submit" class="btn btn-success btn-sm">✓ Complete</button>
+                        </form>
+                        <div class="task-edit-actions">
+                            <button onclick="toggleEditTask({{.ID}})" class="btn-icon" title="Edit">✏️</button>
+                            <form method="POST" action="/tasks/{{.ID}}/delete" style="display: inline;" onsubmit="return confirm('Delete this task?');">
+                                <button type="submit" class="btn-icon" title="Delete">🗑️</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id="edit-task-{{.ID}}" class="edit-form" style="display: none;">
+                        <form method="POST" action="/tasks/{{.ID}}/update" class="form">
+                            <div class="form-group">
+                                <input type="text" name="title" value="{{.Title}}" required>
+                            </div>
+                            <div class="form-group">
+                                <textarea name="description" rows="2">{{.Description}}</textarea>
+                            </div>
+                            <div class="form-row">
+                                <select name="task_type" required>
+                                    <option value="boolean" {{if eq .TaskType "boolean"}}selected{{end}}>One-time</option>
+                                    <option value="integer" {{if eq .TaskType "integer"}}selected{{end}}>Countable</option>
+                                </select>
+                                <input type="number" name="reward_value" value="{{.RewardValue}}" min="1" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                <button type="button" onclick="toggleEditTask({{.ID}})" class="btn btn-sm btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
                 {{end}}
             </div>
@@ -109,7 +149,15 @@
             <div class="shop-grid">
                 {{range .ShopItems}}
                 <div class="shop-item">
-                    <h4>{{.Title}}</h4>
+                    <div class="shop-item-header">
+                        <h4>{{.Title}}</h4>
+                        <div class="shop-edit-actions">
+                            <button onclick="toggleEditShop({{.ID}})" class="btn-icon" title="Edit">✏️</button>
+                            <form method="POST" action="/shop/{{.ID}}/delete" style="display: inline;" onsubmit="return confirm('Delete this item?');">
+                                <button type="submit" class="btn-icon" title="Delete">🗑️</button>
+                            </form>
+                        </div>
+                    </div>
                     {{if .Description}}
                     <p class="text-muted">{{.Description}}</p>
                     {{end}}
@@ -117,6 +165,23 @@
                         <span class="price">🪙 {{.Cost}}</span>
                         <form method="POST" action="/shop/{{.ID}}/buy" style="display: inline;">
                             <button type="submit" class="btn btn-primary btn-sm">Buy</button>
+                        </form>
+                    </div>
+                    <div id="edit-shop-{{.ID}}" class="edit-form" style="display: none;">
+                        <form method="POST" action="/shop/{{.ID}}/update" class="form">
+                            <div class="form-group">
+                                <input type="text" name="title" value="{{.Title}}" required>
+                            </div>
+                            <div class="form-group">
+                                <textarea name="description" rows="2">{{.Description}}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <input type="number" name="cost" value="{{.Cost}}" min="1" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                <button type="button" onclick="toggleEditShop({{.ID}})" class="btn btn-sm btn-secondary">Cancel</button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -155,8 +220,148 @@ function toggleForm(formId) {
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
-function toggleQuantity(select) {
-    // This would be used if we had more complex UI needs
+function toggleEditTask(taskId) {
+    const editForm = document.getElementById('edit-task-' + taskId);
+    editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleEditShop(itemId) {
+    const editForm = document.getElementById('edit-shop-' + itemId);
+    editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+}
+
+function incrementQty(btn) {
+    const input = btn.parentElement.querySelector('input[type="number"]');
+    input.value = parseInt(input.value || 0) + 1;
+}
+
+function decrementQty(btn) {
+    const input = btn.parentElement.querySelector('input[type="number"]');
+    const currentValue = parseInt(input.value || 1);
+    if (currentValue > 1) {
+        input.value = currentValue - 1;
+    }
 }
 </script>
+
+<style>
+.quick-links {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.quick-link {
+    padding: 8px 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.quick-link:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.task-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.task-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.task-edit-actions, .shop-edit-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+}
+
+.edit-form {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.quantity-stepper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.stepper-btn {
+    background: var(--bg-secondary);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.stepper-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.quantity-stepper input {
+    width: 50px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.quantity-stepper input::-webkit-inner-spin-button,
+.quantity-stepper input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.shop-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.shop-item-header h4 {
+    flex: 1;
+}
+</style>
 {{end}}

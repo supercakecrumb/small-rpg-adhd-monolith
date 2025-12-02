@@ -71,5 +71,42 @@ type Transaction struct {
 	Amount     int // Positive for earnings, negative for spending
 	SourceType SourceType
 	SourceID   *int64 // Nullable FK to Task or ShopItem
+	Quantity   int    // For integer tasks: how many units were completed
 	CreatedAt  time.Time
+}
+
+// Purchase represents a shop item purchase with fulfillment tracking
+type Purchase struct {
+	ID            int64
+	TransactionID int64
+	UserID        int64
+	GroupID       int64
+	ShopItemID    int64
+	Fulfilled     bool
+	FulfilledAt   *time.Time
+	FulfilledBy   *int64 // User who fulfilled the purchase
+	Notes         string
+	CreatedAt     time.Time
+}
+
+// UserProfile represents extended user profile information
+type UserProfile struct {
+	UserID                int64
+	TelegramPhotoURL      string
+	TelegramPhotoCachedAt *time.Time
+	NotificationEnabled   bool
+}
+
+// TaskCompletionHistory represents detailed task completion info
+type TaskCompletionHistory struct {
+	Transaction *Transaction
+	Task        *Task
+	User        *User
+}
+
+// PurchaseHistory represents detailed purchase info
+type PurchaseHistory struct {
+	Purchase *Purchase
+	ShopItem *ShopItem
+	User     *User
 }

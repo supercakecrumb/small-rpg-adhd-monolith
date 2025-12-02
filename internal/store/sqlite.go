@@ -88,9 +88,36 @@ func (s *Store) migrate() error {
 		amount INTEGER NOT NULL,
 		source_type TEXT CHECK(source_type IN ('task', 'shop_item', 'manual')),
 		source_id INTEGER,
+		quantity INTEGER DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES users(id),
 		FOREIGN KEY(group_id) REFERENCES groups(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS purchases (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		transaction_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		group_id INTEGER NOT NULL,
+		shop_item_id INTEGER NOT NULL,
+		fulfilled BOOLEAN DEFAULT 0,
+		fulfilled_at DATETIME,
+		fulfilled_by INTEGER,
+		notes TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(transaction_id) REFERENCES transactions(id),
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(group_id) REFERENCES groups(id),
+		FOREIGN KEY(shop_item_id) REFERENCES shop_items(id),
+		FOREIGN KEY(fulfilled_by) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS user_profiles (
+		user_id INTEGER PRIMARY KEY,
+		telegram_photo_url TEXT,
+		telegram_photo_cached_at DATETIME,
+		notification_enabled BOOLEAN DEFAULT 1,
+		FOREIGN KEY(user_id) REFERENCES users(id)
 	);
 	`
 
