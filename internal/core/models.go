@@ -35,14 +35,16 @@ const (
 
 // Task represents a task in a group
 type Task struct {
-	ID          int64
-	GroupID     int64
-	Title       string
-	Description string
-	TaskType    TaskType
-	RewardValue int // Coins per completion or per unit
-	IsOneTime   bool
-	CreatedAt   time.Time
+	ID              int64
+	GroupID         int64
+	Title           string
+	Description     string
+	TaskType        TaskType
+	RewardValue     int // Coins per completion or per unit
+	DefaultQuantity int // Default quantity for integer tasks
+	IsOneTime       bool
+	DueAt           *time.Time // Optional deadline for the task
+	CreatedAt       time.Time
 }
 
 // ShopItem represents an item in the group shop
@@ -67,14 +69,16 @@ const (
 
 // Transaction represents a coin transaction
 type Transaction struct {
-	ID         int64
-	UserID     int64
-	GroupID    int64
-	Amount     int // Positive for earnings, negative for spending
-	SourceType SourceType
-	SourceID   *int64 // Nullable FK to Task or ShopItem
-	Quantity   int    // For integer tasks: how many units were completed
-	CreatedAt  time.Time
+	ID          int64
+	UserID      int64
+	GroupID     int64
+	Amount      int // Positive for earnings, negative for spending
+	SourceType  SourceType
+	SourceID    *int64 // Nullable FK to Task or ShopItem
+	Quantity    int    // For integer tasks: how many units were completed
+	Description string // Stored task title or shop item title
+	Notes       string // Stored task description or shop item description
+	CreatedAt   time.Time
 }
 
 // Purchase represents a shop item purchase with fulfillment tracking
@@ -111,4 +115,24 @@ type PurchaseHistory struct {
 	Purchase *Purchase
 	ShopItem *ShopItem
 	User     *User
+}
+
+// NotificationSettings represents user-specific notification preferences
+type NotificationSettings struct {
+	UserID               int64
+	ReminderDeltaMinutes int // Notify X minutes before deadline
+	SnoozeDefaultMinutes int // Default snooze duration
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+// TaskNotification represents a scheduled or sent notification for a task
+type TaskNotification struct {
+	ID               int64
+	TaskID           int64
+	UserID           int64
+	NotificationType string // 'before_deadline', 'on_deadline', 'snooze'
+	ScheduledAt      time.Time
+	SentAt           *time.Time // NULL if pending
+	CreatedAt        time.Time
 }

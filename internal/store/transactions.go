@@ -7,19 +7,19 @@ import (
 )
 
 // CreateTransaction creates a new transaction
-func (s *Store) CreateTransaction(userID, groupID int64, amount int, sourceType core.SourceType, sourceID *int64, quantity int) (*core.Transaction, error) {
+func (s *Store) CreateTransaction(userID, groupID int64, amount int, sourceType core.SourceType, sourceID *int64, quantity int, description, notes string) (*core.Transaction, error) {
 	var result sql.Result
 	var err error
 
 	if sourceID != nil {
 		result, err = s.DB.Exec(
-			"INSERT INTO transactions (user_id, group_id, amount, source_type, source_id, quantity) VALUES (?, ?, ?, ?, ?, ?)",
-			userID, groupID, amount, string(sourceType), *sourceID, quantity,
+			"INSERT INTO transactions (user_id, group_id, amount, source_type, source_id, quantity, description, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+			userID, groupID, amount, string(sourceType), *sourceID, quantity, description, notes,
 		)
 	} else {
 		result, err = s.DB.Exec(
-			"INSERT INTO transactions (user_id, group_id, amount, source_type, quantity) VALUES (?, ?, ?, ?, ?)",
-			userID, groupID, amount, string(sourceType), quantity,
+			"INSERT INTO transactions (user_id, group_id, amount, source_type, quantity, description, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			userID, groupID, amount, string(sourceType), quantity, description, notes,
 		)
 	}
 
@@ -40,11 +40,13 @@ func (s *Store) GetTransactionByID(id int64) (*core.Transaction, error) {
 	tx := &core.Transaction{}
 	var sourceType string
 	var sourceID sql.NullInt64
+	var description sql.NullString
+	var notes sql.NullString
 
 	err := s.DB.QueryRow(
-		"SELECT id, user_id, group_id, amount, source_type, source_id, quantity, created_at FROM transactions WHERE id = ?",
+		"SELECT id, user_id, group_id, amount, source_type, source_id, quantity, COALESCE(description, ''), COALESCE(notes, ''), created_at FROM transactions WHERE id = ?",
 		id,
-	).Scan(&tx.ID, &tx.UserID, &tx.GroupID, &tx.Amount, &sourceType, &sourceID, &tx.Quantity, &tx.CreatedAt)
+	).Scan(&tx.ID, &tx.UserID, &tx.GroupID, &tx.Amount, &sourceType, &sourceID, &tx.Quantity, &description, &notes, &tx.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -57,6 +59,12 @@ func (s *Store) GetTransactionByID(id int64) (*core.Transaction, error) {
 	if sourceID.Valid {
 		tx.SourceID = &sourceID.Int64
 	}
+	if description.Valid {
+		tx.Description = description.String
+	}
+	if notes.Valid {
+		tx.Notes = notes.String
+	}
 
 	return tx, nil
 }
@@ -64,7 +72,7 @@ func (s *Store) GetTransactionByID(id int64) (*core.Transaction, error) {
 // GetTransactionsByUserAndGroup retrieves all transactions for a user in a group
 func (s *Store) GetTransactionsByUserAndGroup(userID, groupID int64) ([]*core.Transaction, error) {
 	rows, err := s.DB.Query(
-		"SELECT id, user_id, group_id, amount, source_type, source_id, quantity, created_at FROM transactions WHERE user_id = ? AND group_id = ? ORDER BY created_at DESC",
+		"SELECT id, user_id, group_id, amount, source_type, source_id, quantity, COALESCE(description, ''), COALESCE(notes, ''), created_at FROM transactions WHERE user_id = ? AND group_id = ? ORDER BY created_at DESC",
 		userID, groupID,
 	)
 	if err != nil {
@@ -77,14 +85,22 @@ func (s *Store) GetTransactionsByUserAndGroup(userID, groupID int64) ([]*core.Tr
 		tx := &core.Transaction{}
 		var sourceType string
 		var sourceID sql.NullInt64
+		var description sql.NullString
+		var notes sql.NullString
 
-		if err := rows.Scan(&tx.ID, &tx.UserID, &tx.GroupID, &tx.Amount, &sourceType, &sourceID, &tx.Quantity, &tx.CreatedAt); err != nil {
+		if err := rows.Scan(&tx.ID, &tx.UserID, &tx.GroupID, &tx.Amount, &sourceType, &sourceID, &tx.Quantity, &description, &notes, &tx.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan transaction: %w", err)
 		}
 
 		tx.SourceType = core.SourceType(sourceType)
 		if sourceID.Valid {
 			tx.SourceID = &sourceID.Int64
+		}
+		if description.Valid {
+			tx.Description = description.String
+		}
+		if notes.Valid {
+			tx.Notes = notes.String
 		}
 
 		transactions = append(transactions, tx)
@@ -97,7 +113,8 @@ func (s *Store) GetTransactionsByUserAndGroup(userID, groupID int64) ([]*core.Tr
 func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCompletionHistory, error) {
 	query := `
 		SELECT
-			t.id, t.user_id, t.group_id, t.amount, t.source_type, t.source_id, t.quantity, t.created_at,
+			t.id, t.user_id, t.group_id, t.amount, t.source_type, t.source_id, t.quantity,
+			COALESCE(t.description, ''), COALESCE(t.notes, ''), t.created_at,
 			task.id, task.group_id, task.title, task.description, task.task_type, task.reward_value, task.created_at,
 			u.id, u.telegram_id, u.username, u.created_at
 		FROM transactions t
@@ -124,6 +141,8 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 		var sourceID sql.NullInt64
 		var taskType sql.NullString
 		var telegramID sql.NullInt64
+		var transactionDescription string
+		var transactionNotes string
 
 		// All task fields are now nullable since LEFT JOIN may not find the task
 		var taskID sql.NullInt64
@@ -135,7 +154,8 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 
 		if err := rows.Scan(
 			&tch.Transaction.ID, &tch.Transaction.UserID, &tch.Transaction.GroupID,
-			&tch.Transaction.Amount, &sourceType, &sourceID, &tch.Transaction.Quantity, &tch.Transaction.CreatedAt,
+			&tch.Transaction.Amount, &sourceType, &sourceID, &tch.Transaction.Quantity,
+			&transactionDescription, &transactionNotes, &tch.Transaction.CreatedAt,
 			&taskID, &taskGroupID, &taskTitle, &taskDescription,
 			&taskType, &taskRewardValue, &taskCreatedAt,
 			&tch.User.ID, &telegramID, &tch.User.Username, &tch.User.CreatedAt,
@@ -144,12 +164,19 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 		}
 
 		tch.Transaction.SourceType = core.SourceType(sourceType)
+		tch.Transaction.Description = transactionDescription
+		tch.Transaction.Notes = transactionNotes
 		if sourceID.Valid {
 			tch.Transaction.SourceID = &sourceID.Int64
 		}
 
-		// Populate task fields if task still exists
-		if taskID.Valid {
+		// Prefer transaction's stored description/notes, fall back to task if available
+		if transactionDescription != "" {
+			// Use stored transaction data (preferred for deleted tasks)
+			tch.Task.Title = transactionDescription
+			tch.Task.Description = transactionNotes
+		} else if taskID.Valid {
+			// Fall back to task data if transaction didn't store it (old records)
 			tch.Task.ID = taskID.Int64
 			tch.Task.GroupID = taskGroupID.Int64
 			tch.Task.Title = taskTitle.String
@@ -160,7 +187,7 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 				tch.Task.TaskType = core.TaskType(taskType.String)
 			}
 		} else {
-			// Task was deleted, use placeholder values
+			// Neither transaction data nor task exists
 			tch.Task.Title = "[Deleted Task]"
 			tch.Task.Description = "This task has been deleted"
 		}

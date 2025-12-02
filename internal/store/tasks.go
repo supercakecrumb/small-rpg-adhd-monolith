@@ -7,10 +7,10 @@ import (
 )
 
 // CreateTask creates a new task in a group
-func (s *Store) CreateTask(groupID int64, title, description string, taskType core.TaskType, rewardValue int, isOneTime bool) (*core.Task, error) {
+func (s *Store) CreateTask(groupID int64, title, description string, taskType core.TaskType, rewardValue int, defaultQuantity int, isOneTime bool) (*core.Task, error) {
 	result, err := s.DB.Exec(
-		"INSERT INTO tasks (group_id, title, description, task_type, reward_value, is_one_time) VALUES (?, ?, ?, ?, ?, ?)",
-		groupID, title, description, string(taskType), rewardValue, isOneTime,
+		"INSERT INTO tasks (group_id, title, description, task_type, reward_value, default_quantity, is_one_time, due_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		groupID, title, description, string(taskType), rewardValue, defaultQuantity, isOneTime, nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
@@ -30,9 +30,9 @@ func (s *Store) GetTaskByID(id int64) (*core.Task, error) {
 	var taskType string
 
 	err := s.DB.QueryRow(
-		"SELECT id, group_id, title, description, task_type, reward_value, is_one_time, created_at FROM tasks WHERE id = ?",
+		"SELECT id, group_id, title, description, task_type, reward_value, default_quantity, is_one_time, created_at FROM tasks WHERE id = ?",
 		id,
-	).Scan(&task.ID, &task.GroupID, &task.Title, &task.Description, &taskType, &task.RewardValue, &task.IsOneTime, &task.CreatedAt)
+	).Scan(&task.ID, &task.GroupID, &task.Title, &task.Description, &taskType, &task.RewardValue, &task.DefaultQuantity, &task.IsOneTime, &task.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -48,7 +48,7 @@ func (s *Store) GetTaskByID(id int64) (*core.Task, error) {
 // GetTasksByGroupID retrieves all tasks for a group
 func (s *Store) GetTasksByGroupID(groupID int64) ([]*core.Task, error) {
 	rows, err := s.DB.Query(
-		"SELECT id, group_id, title, description, task_type, reward_value, is_one_time, created_at FROM tasks WHERE group_id = ?",
+		"SELECT id, group_id, title, description, task_type, reward_value, default_quantity, is_one_time, created_at FROM tasks WHERE group_id = ?",
 		groupID,
 	)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *Store) GetTasksByGroupID(groupID int64) ([]*core.Task, error) {
 		task := &core.Task{}
 		var taskType string
 
-		if err := rows.Scan(&task.ID, &task.GroupID, &task.Title, &task.Description, &taskType, &task.RewardValue, &task.IsOneTime, &task.CreatedAt); err != nil {
+		if err := rows.Scan(&task.ID, &task.GroupID, &task.Title, &task.Description, &taskType, &task.RewardValue, &task.DefaultQuantity, &task.IsOneTime, &task.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 
@@ -133,14 +133,16 @@ func (s *Store) GetShopItemsByGroupID(groupID int64) ([]*core.ShopItem, error) {
 }
 
 // UpdateTask updates a task's details
-func (s *Store) UpdateTask(id int64, title, description string, taskType core.TaskType, rewardValue int, isOneTime bool) error {
+// Note: This method currently doesn't update due_at field
+// TODO: Add UpdateTaskWithDueDate method or extend this to handle due_at when UI is implemented
+func (s *Store) UpdateTask(id int64, title, description string, taskType core.TaskType, rewardValue int, defaultQuantity int, isOneTime bool) error {
 	query := `
 		UPDATE tasks
-		SET title = ?, description = ?, task_type = ?, reward_value = ?, is_one_time = ?
+		SET title = ?, description = ?, task_type = ?, reward_value = ?, default_quantity = ?, is_one_time = ?
 		WHERE id = ?
 	`
 
-	_, err := s.DB.Exec(query, title, description, string(taskType), rewardValue, isOneTime, id)
+	_, err := s.DB.Exec(query, title, description, string(taskType), rewardValue, defaultQuantity, isOneTime, id)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}

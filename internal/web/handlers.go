@@ -13,6 +13,7 @@ import (
 type basePageData struct {
 	Username     string
 	UserPhotoURL string
+	Group        *core.Group
 }
 
 type dashboardData struct {
@@ -186,6 +187,7 @@ func (s *Server) handleGroupView(w http.ResponseWriter, r *http.Request) {
 		Success:      r.URL.Query().Get("success"),
 		Error:        r.URL.Query().Get("error"),
 	}
+	data.basePageData.Group = group
 
 	s.renderTemplate(w, "group.html", data)
 }
@@ -208,6 +210,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	description := r.FormValue("description")
 	taskTypeStr := r.FormValue("task_type")
 	rewardValueStr := r.FormValue("reward_value")
+	defaultQuantityStr := r.FormValue("default_quantity")
 	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || taskTypeStr == "" || rewardValueStr == "" {
@@ -222,7 +225,16 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.service.CreateTask(groupID, title, description, taskType, rewardValue, isOneTime)
+	// Parse default quantity, default to 10 if not provided or for boolean tasks
+	defaultQuantity := 10
+	if taskType == core.TaskTypeInteger && defaultQuantityStr != "" {
+		dq, err := strconv.Atoi(defaultQuantityStr)
+		if err == nil && dq > 0 {
+			defaultQuantity = dq
+		}
+	}
+
+	_, err = s.service.CreateTask(groupID, title, description, taskType, rewardValue, defaultQuantity, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+groupIDStr+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -368,6 +380,7 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	description := r.FormValue("description")
 	taskTypeStr := r.FormValue("task_type")
 	rewardValueStr := r.FormValue("reward_value")
+	defaultQuantityStr := r.FormValue("default_quantity")
 	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || taskTypeStr == "" || rewardValueStr == "" {
@@ -382,7 +395,16 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.service.UpdateTask(taskID, title, description, taskType, rewardValue, isOneTime)
+	// Parse default quantity, default to 10 if not provided or for boolean tasks
+	defaultQuantity := 10
+	if taskType == core.TaskTypeInteger && defaultQuantityStr != "" {
+		dq, err := strconv.Atoi(defaultQuantityStr)
+		if err == nil && dq > 0 {
+			defaultQuantity = dq
+		}
+	}
+
+	err = s.service.UpdateTask(taskID, title, description, taskType, rewardValue, defaultQuantity, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -489,8 +511,9 @@ func (s *Server) handleDeleteShopItem(w http.ResponseWriter, r *http.Request) {
 
 type taskLogData struct {
 	basePageData
-	Group *core.Group
-	Log   []*core.TaskCompletionHistory
+	Group   *core.Group
+	Log     []*core.TaskCompletionHistory
+	Balance int
 }
 
 // handleTaskLog displays task completion log
@@ -523,19 +546,29 @@ func (s *Server) handleTaskLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get balance
+	balance, err := s.service.GetBalance(userID, groupID)
+	if err != nil {
+		http.Error(w, "Failed to load balance", http.StatusInternalServerError)
+		return
+	}
+
 	data := taskLogData{
 		basePageData: s.buildBasePageData(user),
 		Group:        group,
 		Log:          taskLog,
+		Balance:      balance,
 	}
+	data.basePageData.Group = group
 
 	s.renderTemplate(w, "task_log.html", data)
 }
 
 type purchaseLogData struct {
 	basePageData
-	Group *core.Group
-	Log   []*core.PurchaseHistory
+	Group   *core.Group
+	Log     []*core.PurchaseHistory
+	Balance int
 }
 
 // handlePurchaseLog displays purchase log
@@ -567,11 +600,20 @@ func (s *Server) handlePurchaseLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get balance
+	balance, err := s.service.GetBalance(userID, groupID)
+	if err != nil {
+		http.Error(w, "Failed to load balance", http.StatusInternalServerError)
+		return
+	}
+
 	data := purchaseLogData{
 		basePageData: s.buildBasePageData(user),
 		Group:        group,
 		Log:          log,
+		Balance:      balance,
 	}
+	data.basePageData.Group = group
 
 	s.renderTemplate(w, "purchase_log.html", data)
 }

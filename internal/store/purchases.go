@@ -194,10 +194,12 @@ func (s *Store) GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*core
 		SELECT
 			p.id, p.transaction_id, p.user_id, p.group_id, p.shop_item_id,
 			p.fulfilled, p.fulfilled_at, p.fulfilled_by, COALESCE(p.notes, '') as notes, p.created_at,
+			t.description, t.notes,
 			si.id, si.group_id, si.title, si.description, si.cost, si.created_at,
 			u.id, u.telegram_id, u.username, u.created_at
 		FROM purchases p
-		JOIN shop_items si ON p.shop_item_id = si.id
+		JOIN transactions t ON p.transaction_id = t.id
+		LEFT JOIN shop_items si ON p.shop_item_id = si.id
 		JOIN users u ON p.user_id = u.id
 		WHERE p.user_id = ? AND p.group_id = ?
 		ORDER BY p.created_at DESC
@@ -219,13 +221,24 @@ func (s *Store) GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*core
 		var fulfilledAt sql.NullTime
 		var fulfilledBy sql.NullInt64
 		var telegramID sql.NullInt64
+		var transactionDescription sql.NullString
+		var transactionNotes sql.NullString
+
+		// Shop item fields are nullable since LEFT JOIN may not find the item
+		var shopItemID sql.NullInt64
+		var shopItemGroupID sql.NullInt64
+		var shopItemTitle sql.NullString
+		var shopItemDescription sql.NullString
+		var shopItemCost sql.NullInt64
+		var shopItemCreatedAt sql.NullTime
 
 		if err := rows.Scan(
 			&ph.Purchase.ID, &ph.Purchase.TransactionID, &ph.Purchase.UserID,
 			&ph.Purchase.GroupID, &ph.Purchase.ShopItemID, &ph.Purchase.Fulfilled,
 			&fulfilledAt, &fulfilledBy, &ph.Purchase.Notes, &ph.Purchase.CreatedAt,
-			&ph.ShopItem.ID, &ph.ShopItem.GroupID, &ph.ShopItem.Title,
-			&ph.ShopItem.Description, &ph.ShopItem.Cost, &ph.ShopItem.CreatedAt,
+			&transactionDescription, &transactionNotes,
+			&shopItemID, &shopItemGroupID, &shopItemTitle,
+			&shopItemDescription, &shopItemCost, &shopItemCreatedAt,
 			&ph.User.ID, &telegramID, &ph.User.Username, &ph.User.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan purchase history: %w", err)
@@ -239,6 +252,27 @@ func (s *Store) GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*core
 		}
 		if telegramID.Valid {
 			ph.User.TelegramID = &telegramID.Int64
+		}
+
+		// Prefer transaction's stored description/notes, fall back to shop item if available
+		if transactionDescription.Valid && transactionDescription.String != "" {
+			// Use stored transaction data (preferred for deleted items)
+			ph.ShopItem.Title = transactionDescription.String
+			if transactionNotes.Valid {
+				ph.ShopItem.Description = transactionNotes.String
+			}
+		} else if shopItemID.Valid {
+			// Fall back to shop item data if transaction didn't store it (old records)
+			ph.ShopItem.ID = shopItemID.Int64
+			ph.ShopItem.GroupID = shopItemGroupID.Int64
+			ph.ShopItem.Title = shopItemTitle.String
+			ph.ShopItem.Description = shopItemDescription.String
+			ph.ShopItem.Cost = int(shopItemCost.Int64)
+			ph.ShopItem.CreatedAt = shopItemCreatedAt.Time
+		} else {
+			// Neither transaction data nor shop item exists
+			ph.ShopItem.Title = "[Deleted Item]"
+			ph.ShopItem.Description = "This shop item has been deleted"
 		}
 
 		history = append(history, &ph)

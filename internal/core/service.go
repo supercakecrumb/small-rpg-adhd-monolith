@@ -1,9 +1,12 @@
 package core
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
+	"time"
 )
 
 // Store interface defines the methods required from the storage layer
@@ -24,10 +27,10 @@ type Store interface {
 	IsUserInGroup(userID, groupID int64) (bool, error)
 
 	// Task operations
-	CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) (*Task, error)
+	CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, defaultQuantity int, isOneTime bool) (*Task, error)
 	GetTaskByID(id int64) (*Task, error)
 	GetTasksByGroupID(groupID int64) ([]*Task, error)
-	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) error
+	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, defaultQuantity int, isOneTime bool) error
 	DeleteTask(id int64) error
 
 	// Shop operations
@@ -38,7 +41,7 @@ type Store interface {
 	DeleteShopItem(id int64) error
 
 	// Transaction operations
-	CreateTransaction(userID, groupID int64, amount int, sourceType SourceType, sourceID *int64, quantity int) (*Transaction, error)
+	CreateTransaction(userID, groupID int64, amount int, sourceType SourceType, sourceID *int64, quantity int, description, notes string) (*Transaction, error)
 	GetTransactionByID(id int64) (*Transaction, error)
 	GetTransactionsByUserAndGroup(userID, groupID int64) ([]*Transaction, error)
 	GetBalance(userID, groupID int64) (int, error)
@@ -56,6 +59,15 @@ type Store interface {
 	CreateOrUpdateUserProfile(userID int64, telegramPhotoURL string, notificationEnabled bool) error
 	UpdateTelegramPhoto(userID int64, photoURL string) error
 	SetNotificationEnabled(userID int64, enabled bool) error
+
+	// Notification operations
+	GetNotificationSettings(userID int64) (*NotificationSettings, error)
+	UpdateNotificationSettings(settings *NotificationSettings) error
+	CreateNotification(notification *TaskNotification) error
+	GetPendingNotifications(now time.Time) ([]*TaskNotification, error)
+	MarkNotificationSent(notificationID int64) error
+	DeleteNotificationsByTask(taskID int64) error
+	GetNotificationByID(id int64) (*TaskNotification, error)
 }
 
 // Service provides business logic for the application
@@ -152,7 +164,7 @@ func (s *Service) JoinGroup(userID int64, inviteCode string) (*Group, error) {
 }
 
 // CreateTask creates a new task in a group
-func (s *Service) CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) (*Task, error) {
+func (s *Service) CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, defaultQuantity int, isOneTime bool) (*Task, error) {
 	if title == "" {
 		return nil, fmt.Errorf("task title cannot be empty")
 	}
@@ -162,8 +174,11 @@ func (s *Service) CreateTask(groupID int64, title, description string, taskType 
 	if rewardValue <= 0 {
 		return nil, fmt.Errorf("reward value must be positive")
 	}
+	if defaultQuantity <= 0 {
+		defaultQuantity = 10 // Default to 10 if not provided or invalid
+	}
 
-	return s.store.CreateTask(groupID, title, description, taskType, rewardValue, isOneTime)
+	return s.store.CreateTask(groupID, title, description, taskType, rewardValue, defaultQuantity, isOneTime)
 }
 
 // GetTasksByGroupID retrieves all tasks for a group
@@ -208,7 +223,7 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 		return nil, fmt.Errorf("unknown task type: %s", task.TaskType)
 	}
 
-	// Create transaction
+	// Create transaction with task details stored
 	transaction, err := s.store.CreateTransaction(
 		userID,
 		task.GroupID,
@@ -216,6 +231,8 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 		SourceTypeTask,
 		&task.ID,
 		finalQuantity,
+		task.Title,       // Store task title as description
+		task.Description, // Store task description as notes
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
@@ -234,7 +251,7 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 }
 
 // UpdateTask updates an existing task
-func (s *Service) UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) error {
+func (s *Service) UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, defaultQuantity int, isOneTime bool) error {
 	if title == "" {
 		return fmt.Errorf("task title cannot be empty")
 	}
@@ -244,12 +261,20 @@ func (s *Service) UpdateTask(id int64, title, description string, taskType TaskT
 	if rewardValue <= 0 {
 		return fmt.Errorf("reward value must be positive")
 	}
+	if defaultQuantity <= 0 {
+		defaultQuantity = 10 // Default to 10 if not provided or invalid
+	}
 
-	return s.store.UpdateTask(id, title, description, taskType, rewardValue, isOneTime)
+	return s.store.UpdateTask(id, title, description, taskType, rewardValue, defaultQuantity, isOneTime)
 }
 
 // DeleteTask deletes a task
 func (s *Service) DeleteTask(id int64) error {
+	// Cancel any pending notifications before deleting the task
+	if err := s.CancelNotificationsForTask(id); err != nil {
+		log.Printf("Warning: failed to cancel notifications for task %d: %v", id, err)
+	}
+
 	return s.store.DeleteTask(id)
 }
 
@@ -313,14 +338,16 @@ func (s *Service) BuyItem(userID, itemID int64) (*Transaction, error) {
 		return nil, fmt.Errorf("insufficient balance: have %d, need %d", balance, item.Cost)
 	}
 
-	// Create negative transaction for the purchase
+	// Create negative transaction for the purchase with item details stored
 	transaction, err := s.store.CreateTransaction(
 		userID,
 		item.GroupID,
 		-item.Cost,
 		SourceTypeShopItem,
 		&item.ID,
-		1, // Always quantity 1 for shop purchases
+		1,                // Always quantity 1 for shop purchases
+		item.Title,       // Store shop item title as description
+		item.Description, // Store shop item description as notes
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
@@ -423,6 +450,7 @@ func (s *Service) UndoTransaction(userID, transactionID int64) error {
 	}
 
 	// Create reversal transaction (negative of original amount)
+	// Keep the same description and notes for consistency
 	reversalAmount := -transaction.Amount
 	_, err = s.store.CreateTransaction(
 		transaction.UserID,
@@ -431,6 +459,8 @@ func (s *Service) UndoTransaction(userID, transactionID int64) error {
 		transaction.SourceType,
 		transaction.SourceID,
 		transaction.Quantity,
+		transaction.Description, // Keep original description
+		transaction.Notes,       // Keep original notes
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create reversal transaction: %w", err)
@@ -447,6 +477,228 @@ func (s *Service) UndoTransaction(userID, transactionID int64) error {
 	}
 
 	return nil
+}
+
+// ScheduleNotificationsForTask creates notification records when a task has a due date
+// Creates two notifications:
+// - One "on_deadline" notification scheduled at due_at
+// - One "before_deadline" notification scheduled at due_at minus user's reminder_delta_minutes
+func (s *Service) ScheduleNotificationsForTask(task *Task) error {
+	// Skip if task has no due date
+	if task.DueAt == nil {
+		return nil
+	}
+
+	// Skip if due date is in the past
+	if task.DueAt.Before(time.Now()) {
+		return nil
+	}
+
+	// Get all members of the group to schedule notifications for them
+	members, err := s.store.GetUsersByGroupID(task.GroupID)
+	if err != nil {
+		return fmt.Errorf("failed to get group members: %w", err)
+	}
+
+	// Schedule notifications for each member
+	for _, member := range members {
+		// Get user's notification settings
+		settings, err := s.store.GetNotificationSettings(member.ID)
+		if err != nil {
+			return fmt.Errorf("failed to get notification settings for user %d: %w", member.ID, err)
+		}
+
+		// Schedule "on_deadline" notification
+		onDeadlineNotif := &TaskNotification{
+			TaskID:           task.ID,
+			UserID:           member.ID,
+			NotificationType: "on_deadline",
+			ScheduledAt:      *task.DueAt,
+		}
+		if err := s.store.CreateNotification(onDeadlineNotif); err != nil {
+			return fmt.Errorf("failed to create on_deadline notification: %w", err)
+		}
+
+		// Schedule "before_deadline" notification
+		beforeDeadline := task.DueAt.Add(-time.Duration(settings.ReminderDeltaMinutes) * time.Minute)
+		// Only schedule if it's still in the future
+		if beforeDeadline.After(time.Now()) {
+			beforeDeadlineNotif := &TaskNotification{
+				TaskID:           task.ID,
+				UserID:           member.ID,
+				NotificationType: "before_deadline",
+				ScheduledAt:      beforeDeadline,
+			}
+			if err := s.store.CreateNotification(beforeDeadlineNotif); err != nil {
+				return fmt.Errorf("failed to create before_deadline notification: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// RescheduleNotificationsForTask updates notifications when a task's due date changes
+// Deletes existing pending notifications and creates new ones if newDueAt is not nil
+func (s *Service) RescheduleNotificationsForTask(taskID int64, newDueAt *time.Time) error {
+	// Delete existing pending notifications
+	if err := s.store.DeleteNotificationsByTask(taskID); err != nil {
+		return fmt.Errorf("failed to delete existing notifications: %w", err)
+	}
+
+	// If newDueAt is nil, we're done (just cancelled notifications)
+	if newDueAt == nil {
+		return nil
+	}
+
+	// Get the task to schedule new notifications
+	task, err := s.store.GetTaskByID(taskID)
+	if err != nil {
+		return fmt.Errorf("failed to get task: %w", err)
+	}
+
+	// Update the task's due_at field for scheduling
+	task.DueAt = newDueAt
+
+	// Schedule new notifications
+	return s.ScheduleNotificationsForTask(task)
+}
+
+// CancelNotificationsForTask deletes all pending notifications for a task
+// This should be called when a task is marked done or deleted
+func (s *Service) CancelNotificationsForTask(taskID int64) error {
+	return s.store.DeleteNotificationsByTask(taskID)
+}
+
+// StartNotificationWorker runs a background goroutine that checks for pending notifications
+// and sends them via Telegram bot. It runs with a 1-minute ticker and handles graceful shutdown.
+//
+// TODO: Future improvements:
+// - Add retry logic for failed notification sends
+// - Implement batch notification processing for better performance
+// - Add metrics/monitoring for notification delivery
+// - Consider using a proper job queue system for high-scale deployments
+func (s *Service) StartNotificationWorker(ctx context.Context, bot BotNotifier) {
+	// Use a ticker that fires every minute
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	log := func(format string, args ...interface{}) {
+		// Simple logging helper
+		fmt.Printf("[NotificationWorker] "+format+"\n", args...)
+	}
+
+	log("Starting notification worker...")
+
+	for {
+		select {
+		case <-ctx.Done():
+			log("Shutdown signal received, stopping notification worker...")
+			return
+
+		case <-ticker.C:
+			// Get pending notifications
+			now := time.Now()
+			notifications, err := s.store.GetPendingNotifications(now)
+			if err != nil {
+				log("Error fetching pending notifications: %v", err)
+				continue
+			}
+
+			if len(notifications) == 0 {
+				continue // No notifications to send
+			}
+
+			log("Found %d pending notification(s) to send", len(notifications))
+
+			// Process each notification
+			for _, notif := range notifications {
+				if err := s.sendNotification(notif, bot); err != nil {
+					log("Error sending notification %d: %v", notif.ID, err)
+					// Don't mark as sent if there was an error
+					// TODO: Implement retry logic with exponential backoff
+					continue
+				}
+
+				// Mark as sent
+				if err := s.store.MarkNotificationSent(notif.ID); err != nil {
+					log("Error marking notification %d as sent: %v", notif.ID, err)
+					// Continue anyway - we sent the notification successfully
+				}
+			}
+		}
+	}
+}
+
+// BotNotifier interface defines the method needed to send notifications via Telegram
+type BotNotifier interface {
+	SendNotification(chatID int64, message string, buttons map[string]string) error
+}
+
+// sendNotification sends a single notification via Telegram
+func (s *Service) sendNotification(notif *TaskNotification, bot BotNotifier) error {
+	// Get task details
+	task, err := s.store.GetTaskByID(notif.TaskID)
+	if err != nil {
+		return fmt.Errorf("failed to get task: %w", err)
+	}
+
+	// Get user to get their Telegram ID
+	user, err := s.store.GetUserByID(notif.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// Skip if user has no Telegram ID
+	if user.TelegramID == nil {
+		return fmt.Errorf("user has no Telegram ID")
+	}
+
+	// Check if user has notifications enabled
+	profile, err := s.store.GetUserProfile(notif.UserID)
+	if err == nil && profile != nil && !profile.NotificationEnabled {
+		// User has disabled notifications, skip
+		return nil
+	}
+
+	// Build notification message
+	var message string
+	if task.DueAt != nil {
+		dueTimeStr := task.DueAt.Format("Mon, 02 Jan 2006 at 15:04")
+		message = fmt.Sprintf("⏰ Task Reminder\n\nTask: %s\nDue: %s", task.Title, dueTimeStr)
+	} else {
+		message = fmt.Sprintf("⏰ Task Reminder\n\nTask: %s", task.Title)
+	}
+
+	if task.Description != "" {
+		message += fmt.Sprintf("\n\n%s", task.Description)
+	}
+
+	// Create inline buttons
+	// Callback data format: "notify_done_{notif_id}", "notify_snooze_{notif_id}", "notify_later_{notif_id}"
+	buttons := map[string]string{
+		"✅ Done":               fmt.Sprintf("notify_done_%d", notif.ID),
+		"⏰ Will do in 15 mins": fmt.Sprintf("notify_snooze_%d", notif.ID),
+		"🔔 Remind later":       fmt.Sprintf("notify_later_%d", notif.ID),
+	}
+
+	// Send via bot
+	return bot.SendNotification(*user.TelegramID, message, buttons)
+}
+
+// GetNotificationByID retrieves a notification by its ID
+func (s *Service) GetNotificationByID(id int64) (*TaskNotification, error) {
+	return s.store.GetNotificationByID(id)
+}
+
+// GetNotificationSettings retrieves notification settings for a user
+func (s *Service) GetNotificationSettings(userID int64) (*NotificationSettings, error) {
+	return s.store.GetNotificationSettings(userID)
+}
+
+// CreateNotification creates a new notification (used for snoozing)
+func (s *Service) CreateNotification(notification *TaskNotification) error {
+	return s.store.CreateNotification(notification)
 }
 
 // generateInviteCode generates a random invite code

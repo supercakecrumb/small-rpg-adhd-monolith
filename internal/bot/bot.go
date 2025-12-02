@@ -308,6 +308,11 @@ func (b *Bot) handleTasks(c tele.Context) error {
 func (b *Bot) handleCallback(c tele.Context) error {
 	data := c.Callback().Data
 
+	// Handle notification action buttons (format: notify_action_id or notify_reschedule_id_minutes)
+	if strings.HasPrefix(data, "notify_") {
+		return b.handleNotificationCallback(c, data)
+	}
+
 	// Parse callback data
 	parts := strings.Split(data, ":")
 	if len(parts) < 2 {
@@ -331,6 +336,313 @@ func (b *Bot) handleCallback(c tele.Context) error {
 		return b.handleNotificationToggle(c, parts[1])
 	default:
 		return c.Respond(&tele.CallbackResponse{Text: "❌ Unknown action"})
+	}
+}
+
+// handleNotificationCallback routes notification action button callbacks
+func (b *Bot) handleNotificationCallback(c tele.Context, data string) error {
+	// Parse callback data: notify_action_id or notify_reschedule_id_minutes
+	parts := strings.Split(data, "_")
+	if len(parts) < 3 {
+		log.Printf("Invalid notification callback data: %s", data)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Invalid notification action"})
+	}
+
+	action := parts[1] // done, snooze, later, reschedule
+	notifIDStr := parts[2]
+	notifID, err := strconv.ParseInt(notifIDStr, 10, 64)
+	if err != nil {
+		log.Printf("Invalid notification ID: %s", notifIDStr)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Invalid notification ID"})
+	}
+
+	// Route to appropriate handler
+	switch action {
+	case "done":
+		return b.handleNotifyDone(c, notifID)
+	case "snooze":
+		return b.handleNotifySnooze(c, notifID)
+	case "later":
+		return b.handleNotifyLater(c, notifID)
+	case "reschedule":
+		// For reschedule, we need the minutes parameter
+		if len(parts) < 4 {
+			log.Printf("Missing minutes parameter for reschedule")
+			return c.Respond(&tele.CallbackResponse{Text: "❌ Invalid reschedule parameters"})
+		}
+		minutesStr := parts[3]
+		minutes, err := strconv.Atoi(minutesStr)
+		if err != nil {
+			log.Printf("Invalid minutes value: %s", minutesStr)
+			return c.Respond(&tele.CallbackResponse{Text: "❌ Invalid time duration"})
+		}
+		return b.handleNotifyReschedule(c, notifID, minutes)
+	default:
+		log.Printf("Unknown notification action: %s", action)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Unknown notification action"})
+	}
+}
+
+// handleNotifyDone handles the "Done" button - marks task as completed
+func (b *Bot) handleNotifyDone(c tele.Context, notificationID int64) error {
+	telegramID := c.Sender().ID
+
+	// Get user
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		log.Printf("Error getting user for notification done: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ User not found"})
+	}
+
+	// Get notification from DB
+	notification, err := b.service.GetNotificationByID(notificationID)
+	if err != nil {
+		log.Printf("Error getting notification %d: %v", notificationID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Notification not found"})
+	}
+
+	// Get task from DB
+	task, err := b.service.GetTaskByID(notification.TaskID)
+	if err != nil {
+		log.Printf("Error getting task %d: %v", notification.TaskID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Task not found"})
+	}
+
+	// Complete the task
+	transaction, err := b.service.CompleteTask(user.ID, task.ID, nil)
+	if err != nil {
+		log.Printf("Error completing task %d: %v", task.ID, err)
+		return c.Respond(&tele.CallbackResponse{Text: fmt.Sprintf("❌ %v", err)})
+	}
+
+	// Edit message to show completion (remove keyboard)
+	successMsg := fmt.Sprintf(
+		"✅ Task completed: %s\n\n"+
+			"💰 +%d coins earned!\n\n"+
+			"Great job! Keep up the momentum! 💪",
+		task.Title,
+		transaction.Amount,
+	)
+
+	err = c.Edit(successMsg)
+	if err != nil {
+		log.Printf("Error editing message after task completion: %v", err)
+	}
+
+	// Answer callback query with success message
+	return c.Respond(&tele.CallbackResponse{
+		Text: fmt.Sprintf("✅ +%d coins!", transaction.Amount),
+	})
+}
+
+// handleNotifySnooze handles the "Snooze" button - reschedules notification for default snooze duration
+func (b *Bot) handleNotifySnooze(c tele.Context, notificationID int64) error {
+	telegramID := c.Sender().ID
+
+	// Get user
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		log.Printf("Error getting user for notification snooze: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ User not found"})
+	}
+
+	// Get notification from DB
+	notification, err := b.service.GetNotificationByID(notificationID)
+	if err != nil {
+		log.Printf("Error getting notification %d: %v", notificationID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Notification not found"})
+	}
+
+	// Get task from DB
+	task, err := b.service.GetTaskByID(notification.TaskID)
+	if err != nil {
+		log.Printf("Error getting task %d: %v", notification.TaskID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Task not found"})
+	}
+
+	// Get user's notification settings to get snooze_default_minutes
+	// TODO: Load duration options from user's notification settings once user settings UI is implemented
+	settings, err := b.service.GetNotificationSettings(user.ID)
+	if err != nil {
+		log.Printf("Error getting notification settings: %v", err)
+		// Use default if can't get settings
+		settings = &core.NotificationSettings{
+			SnoozeDefaultMinutes: 15,
+		}
+	}
+
+	// Create snooze notification helper
+	if err := b.createSnoozeNotification(task.ID, user.ID, settings.SnoozeDefaultMinutes); err != nil {
+		log.Printf("Error creating snooze notification: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Failed to snooze notification"})
+	}
+
+	// Edit message to show snooze confirmation (remove keyboard)
+	snoozeMsg := fmt.Sprintf(
+		"⏰ Snoozed for %d minutes\n\n"+
+			"Task: %s\n\n"+
+			"I'll remind you again soon! 💤",
+		settings.SnoozeDefaultMinutes,
+		task.Title,
+	)
+
+	err = c.Edit(snoozeMsg)
+	if err != nil {
+		log.Printf("Error editing message after snooze: %v", err)
+	}
+
+	// Answer callback query
+	return c.Respond(&tele.CallbackResponse{
+		Text: fmt.Sprintf("⏰ Snoozed for %d minutes", settings.SnoozeDefaultMinutes),
+	})
+}
+
+// handleNotifyLater handles the "Remind Later" button - shows duration selection menu
+func (b *Bot) handleNotifyLater(c tele.Context, notificationID int64) error {
+	// Get notification from DB
+	notification, err := b.service.GetNotificationByID(notificationID)
+	if err != nil {
+		log.Printf("Error getting notification %d: %v", notificationID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Notification not found"})
+	}
+
+	// Get task from DB
+	task, err := b.service.GetTaskByID(notification.TaskID)
+	if err != nil {
+		log.Printf("Error getting task %d: %v", notification.TaskID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Task not found"})
+	}
+
+	// TODO: Load duration options from user's notification settings once user settings UI is implemented
+	// For now, use hardcoded default durations
+	durationOptions := []struct {
+		label   string
+		minutes int
+	}{
+		{"30 minutes", 30},
+		{"1 hour", 60},
+		{"2 hours", 120},
+		{"4 hours", 240},
+		{"Tomorrow (24h)", 1440},
+	}
+
+	// Create inline keyboard with duration options
+	var rows [][]tele.InlineButton
+	for _, opt := range durationOptions {
+		btn := tele.InlineButton{
+			Text: opt.label,
+			Data: fmt.Sprintf("notify_reschedule_%d_%d", notificationID, opt.minutes),
+		}
+		rows = append(rows, []tele.InlineButton{btn})
+	}
+
+	markup := &tele.ReplyMarkup{InlineKeyboard: rows}
+
+	// Edit message to show duration selection (keep task info, change keyboard)
+	laterMsg := fmt.Sprintf(
+		"🔔 Remind me later about:\n\n"+
+			"%s\n\n"+
+			"When should I remind you?",
+		task.Title,
+	)
+
+	err = c.Edit(laterMsg, markup)
+	if err != nil {
+		log.Printf("Error editing message for later options: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Failed to show options"})
+	}
+
+	// Answer callback query
+	return c.Respond(&tele.CallbackResponse{
+		Text: "Choose a time",
+	})
+}
+
+// handleNotifyReschedule handles duration selection from "Remind Later" menu
+func (b *Bot) handleNotifyReschedule(c tele.Context, notificationID int64, minutes int) error {
+	telegramID := c.Sender().ID
+
+	// Get user
+	user, err := b.service.GetUserByTelegramID(telegramID)
+	if err != nil {
+		log.Printf("Error getting user for notification reschedule: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ User not found"})
+	}
+
+	// Get notification from DB
+	notification, err := b.service.GetNotificationByID(notificationID)
+	if err != nil {
+		log.Printf("Error getting notification %d: %v", notificationID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Notification not found"})
+	}
+
+	// Get task from DB
+	task, err := b.service.GetTaskByID(notification.TaskID)
+	if err != nil {
+		log.Printf("Error getting task %d: %v", notification.TaskID, err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Task not found"})
+	}
+
+	// Create snooze notification with specified duration
+	if err := b.createSnoozeNotification(task.ID, user.ID, minutes); err != nil {
+		log.Printf("Error creating snooze notification: %v", err)
+		return c.Respond(&tele.CallbackResponse{Text: "❌ Failed to schedule reminder"})
+	}
+
+	// Format duration for display
+	durationStr := formatDuration(minutes)
+
+	// Edit message to show confirmation (remove keyboard)
+	rescheduleMsg := fmt.Sprintf(
+		"🔔 Reminder scheduled!\n\n"+
+			"Task: %s\n\n"+
+			"I'll remind you in %s ⏰",
+		task.Title,
+		durationStr,
+	)
+
+	err = c.Edit(rescheduleMsg)
+	if err != nil {
+		log.Printf("Error editing message after reschedule: %v", err)
+	}
+
+	// Answer callback query
+	return c.Respond(&tele.CallbackResponse{
+		Text: fmt.Sprintf("🔔 Reminder set for %s", durationStr),
+	})
+}
+
+// createSnoozeNotification creates a snooze notification for a task
+// This is a helper method used by both snooze and reschedule handlers
+func (b *Bot) createSnoozeNotification(taskID, userID int64, delayMinutes int) error {
+	scheduledAt := time.Now().Add(time.Duration(delayMinutes) * time.Minute)
+
+	notification := &core.TaskNotification{
+		TaskID:           taskID,
+		UserID:           userID,
+		NotificationType: "snooze",
+		ScheduledAt:      scheduledAt,
+	}
+
+	return b.service.CreateNotification(notification)
+}
+
+// formatDuration formats minutes into a human-readable string
+func formatDuration(minutes int) string {
+	if minutes < 60 {
+		return fmt.Sprintf("%d minutes", minutes)
+	} else if minutes < 1440 {
+		hours := minutes / 60
+		if hours == 1 {
+			return "1 hour"
+		}
+		return fmt.Sprintf("%d hours", hours)
+	} else {
+		days := minutes / 1440
+		if days == 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%d days", days)
 	}
 }
 
@@ -609,4 +921,35 @@ func (b *Bot) NotifyPurchase(groupID, buyerUserID int64, itemTitle string, cost 
 	)
 
 	b.notifyGroupMembers(groupID, buyerUserID, message)
+}
+
+// SendNotification sends a notification message with inline buttons to a Telegram user
+// This implements the core.BotNotifier interface
+func (b *Bot) SendNotification(chatID int64, message string, buttons map[string]string) error {
+	// Create inline keyboard from buttons map
+	var rows [][]tele.InlineButton
+
+	// Add buttons in the order: Done, Snooze, Later (left to right)
+	buttonOrder := []string{"✅ Done", "⏰ Will do in 15 mins", "🔔 Remind later"}
+	var row []tele.InlineButton
+
+	for _, btnText := range buttonOrder {
+		if callbackData, exists := buttons[btnText]; exists {
+			btn := tele.InlineButton{
+				Text: btnText,
+				Data: callbackData,
+			}
+			row = append(row, btn)
+		}
+	}
+
+	if len(row) > 0 {
+		rows = append(rows, row)
+	}
+
+	markup := &tele.ReplyMarkup{InlineKeyboard: rows}
+
+	// Send message to user
+	_, err := b.bot.Send(&tele.User{ID: chatID}, message, markup)
+	return err
 }

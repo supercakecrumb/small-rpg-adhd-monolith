@@ -1,24 +1,37 @@
-{{define "title"}}Purchase Log - {{.Group.Name}}{{end}}
+{{define "title"}}Market Log - {{.Group.Name}}{{end}}
 
 {{define "content"}}
-<div class="page-header">
-    <div>
-        <h2>🛒 Purchase Log</h2>
-        <p class="tagline">{{.Group.Name}}</p>
+<div class="group-topbar">
+    <div class="group-topbar-left">
+        <div class="crumb-row">
+            <a href="/dashboard" class="crumb-link">The Burrow</a>
+            <span class="crumb-divider">•</span>
+            <a href="/groups/{{.Group.ID}}" class="crumb-current">{{.Group.Name}}</a>
+        </div>
+    </div>
+    <div class="group-topbar-center">
+        <a href="/groups/{{.Group.ID}}/tasks/log" class="log-link">Task Log</a>
+        <a href="/groups/{{.Group.ID}}/purchases/log" class="log-link active">Market Log</a>
+    </div>
+    <div class="group-topbar-right">
+        <div class="balance-display">
+            <span class="balance-label">Cheese Stash</span>
+            <span class="balance-amount cheese-pill" data-cheese="{{.Balance}}" data-no-animate="true">🧀 {{.Balance}}</span>
+        </div>
     </div>
 </div>
 
 {{if .Log}}
     <div class="card">
         <div class="card-header">
-            <h3>Purchase History</h3>
+            <h3>Market History</h3>
         </div>
         {{range .Log}}
             <div class="history-item">
                 <div class="history-header">
                     <div>
                         <strong>{{.ShopItem.Title}}</strong>
-                        <span class="badge badge-reward">🪙 -{{.ShopItem.Cost}}</span>
+                        <span class="cheese-tag reward-pill" data-cheese="-{{.ShopItem.Cost}}">🧀 -{{.ShopItem.Cost}}</span>
                         {{if .Purchase.FulfilledAt}}
                             <span class="badge badge-fulfilled">✓ Fulfilled</span>
                         {{else}}
@@ -66,7 +79,7 @@
     </div>
 {{else}}
     <div class="empty-state">
-        No purchases yet. Start buying rewards from the shop!
+        No purchases yet. Visit the market to grab some rewards!
     </div>
 {{end}}
 

@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="dashboard">
     <div class="page-header">
-        <h2>👋 Welcome, {{.Username}}!</h2>
+        <h2>🧀 Welcome to the Burrow, {{.Username}}!</h2>
     </div>
 
     {{if .Error}}
@@ -9,7 +9,13 @@
     {{end}}
 
     <div class="card">
-        <h3>Your Groups</h3>
+        <div class="card-header-with-tooltip">
+            <h3>Your Parties</h3>
+            <button class="info-tooltip-trigger" aria-label="Info about parties">
+                <span class="info-icon">ⓘ</span>
+                <span class="info-tooltip">Parties are shared quest boards for you and others</span>
+            </button>
+        </div>
         
         {{if .Groups}}
         <div class="groups-grid">
@@ -21,34 +27,139 @@
             {{end}}
         </div>
         {{else}}
-        <p class="empty-state">You're not in any groups yet. Create one or join using an invite code!</p>
+        <p class="empty-state">You're not in any parties yet. Create one or join using an invite code!</p>
         {{end}}
     </div>
 
     <div class="actions-grid">
         <div class="card">
-            <h3>➕ Create New Group</h3>
+            <h3>➕ Create New Party</h3>
             <form method="POST" action="/groups/create" class="form">
                 <div class="form-group">
-                    <label for="name">Group Name</label>
+                    <label for="name">Party Name</label>
                     <input type="text" id="name" name="name" required 
-                           placeholder="e.g., Family Tasks">
+                           placeholder="e.g., Cozy Quest Crew">
                 </div>
-                <button type="submit" class="btn btn-primary">Create Group</button>
+                <button type="submit" class="btn btn-primary">Create Party</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>🔗 Join Group</h3>
+            <h3>🔗 Join Party</h3>
             <form method="POST" action="/groups/join" class="form">
                 <div class="form-group">
                     <label for="invite_code">Invite Code</label>
                     <input type="text" id="invite_code" name="invite_code" required 
                            placeholder="Enter invite code">
                 </div>
-                <button type="submit" class="btn btn-secondary">Join Group</button>
+                <button type="submit" class="btn btn-secondary">Join Party</button>
             </form>
         </div>
     </div>
+
+    <div class="card edu-section collapsed">
+        <button class="edu-main-toggle" onclick="toggleMainSection(this)">
+            <span class="toggle-icon">🔮</span>
+            <span class="toggle-text">How the Burrow Works</span>
+            <span class="toggle-hint">(click to expand)</span>
+            <span class="toggle-arrow">▼</span>
+        </button>
+        
+        <div class="edu-content">
+            <div class="edu-flow-container">
+                <div class="collapsible-step-card">
+                    <button class="step-toggle" onclick="toggleStep(this)">
+                        <div class="step-toggle-header">
+                            <div class="edu-icon-large">🧭</div>
+                            <span class="step-title">Create Quest</span>
+                            <span class="step-arrow">▼</span>
+                        </div>
+                    </button>
+                    <div class="step-content">
+                        <p>Small actions—pick one-and-done or countable progress. Start with something that feels manageable and build momentum.</p>
+                    </div>
+                </div>
+                
+                <div class="flow-arrow-between">→</div>
+                
+                <div class="collapsible-step-card">
+                    <button class="step-toggle" onclick="toggleStep(this)">
+                        <div class="step-toggle-header">
+                            <div class="edu-icon-large">✅</div>
+                            <span class="step-title">Complete Quest</span>
+                            <span class="step-arrow">▼</span>
+                        </div>
+                    </button>
+                    <div class="step-content">
+                        <p>Mark your quest as complete when you finish it. Every completion counts and builds your progress!</p>
+                    </div>
+                </div>
+                
+                <div class="flow-arrow-between">→</div>
+                
+                <div class="collapsible-step-card">
+                    <button class="step-toggle" onclick="toggleStep(this)">
+                        <div class="step-toggle-header">
+                            <div class="edu-icon-large">🧀</div>
+                            <span class="step-title">Earn Coins</span>
+                            <span class="step-arrow">▼</span>
+                        </div>
+                    </button>
+                    <div class="step-content">
+                        <p>Get cheese coins for your effort. The reward system stays gentle—it's about progress, not perfection.</p>
+                    </div>
+                </div>
+                
+                <div class="flow-arrow-between">→</div>
+                
+                <div class="collapsible-step-card">
+                    <button class="step-toggle" onclick="toggleStep(this)">
+                        <div class="step-toggle-header">
+                            <div class="edu-icon-large">🛍️</div>
+                            <span class="step-title">Buy Rewards</span>
+                            <span class="step-arrow">▼</span>
+                        </div>
+                    </button>
+                    <div class="step-content">
+                        <p>Swap your coins for treats you choose. Create rewards that motivate you and celebrate your wins!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleMainSection(button) {
+    const section = button.closest('.edu-section');
+    const content = section.querySelector('.edu-content');
+    const arrow = button.querySelector('.toggle-arrow');
+    const hint = button.querySelector('.toggle-hint');
+    
+    section.classList.toggle('collapsed');
+    
+    if (section.classList.contains('collapsed')) {
+        arrow.textContent = '▼';
+        hint.textContent = '(click to expand)';
+    } else {
+        arrow.textContent = '▲';
+        hint.textContent = '(click to collapse)';
+    }
+}
+
+function toggleStep(button) {
+    const card = button.closest('.collapsible-step-card');
+    const content = card.querySelector('.step-content');
+    const arrow = button.querySelector('.step-arrow');
+    
+    card.classList.toggle('expanded');
+    
+    if (card.classList.contains('expanded')) {
+        arrow.textContent = '▲';
+    } else {
+        arrow.textContent = '▼';
+    }
+}
+</script>
 </div>
 {{end}}

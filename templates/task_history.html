@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="container">
     <div class="header">
-        <h1>📜 Task History</h1>
+        <h1>📜 Quest History</h1>
         <p class="subtitle">{{.Group.Name}}</p>
     </div>
 
@@ -21,7 +21,7 @@
                     {{end}}
                 </div>
                 <div class="history-reward">
-                    <span class="coins">+{{.Transaction.Amount}} 🪙</span>
+                    <span class="coins cheese-tag" data-cheese="{{.Transaction.Amount}}">+🧀 {{.Transaction.Amount}}</span>
                 </div>
             </div>
             {{if .Task.Description}}
@@ -38,8 +38,8 @@
     </div>
     {{else}}
     <div class="empty-state">
-        <p>📭 No tasks completed yet.</p>
-        <p class="empty-hint">Start completing tasks to build your history!</p>
+        <p>📭 No quests finished yet.</p>
+        <p class="empty-hint">Start finishing quests to build your history!</p>
     </div>
     {{end}}
 </div>
@@ -74,7 +74,6 @@
 .history-reward {
     font-size: 18px;
     font-weight: 600;
-    color: var(--success-color);
 }
 
 .history-description {

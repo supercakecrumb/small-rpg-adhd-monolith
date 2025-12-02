@@ -67,10 +67,16 @@ func main() {
 
 	router := server.Router()
 
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Initialize and start Telegram bot if token is provided
+	var telegramBot *bot.Bot
 	if botToken != "" {
 		log.Println("Initializing Telegram bot...")
-		telegramBot, err := bot.NewBot(botToken, service, sessionSecret)
+		var err error
+		telegramBot, err = bot.NewBot(botToken, service, sessionSecret)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize Telegram bot: %v", err)
 			log.Println("Continuing without Telegram bot...")
@@ -78,6 +84,11 @@ func main() {
 			log.Println("Telegram bot initialized successfully")
 			// Start bot in a goroutine
 			go telegramBot.Start()
+
+			// Start notification worker
+			log.Println("Starting notification worker...")
+			go service.StartNotificationWorker(ctx, telegramBot)
+			log.Println("Notification worker started successfully")
 		}
 	} else {
 		log.Println("TELEGRAM_BOT_TOKEN not set, Telegram bot will not be started")
@@ -126,12 +137,23 @@ func main() {
 	sig := <-quit
 	log.Printf("\nReceived signal %v, initiating graceful shutdown...", sig)
 
+	// Cancel the context to stop background workers
+	cancel()
+	log.Println("✓ Background workers signaled to stop")
+
 	// Create context with timeout for shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	// Stop Telegram bot if it was started
+	if telegramBot != nil {
+		log.Println("Stopping Telegram bot...")
+		telegramBot.Stop()
+		log.Println("✓ Telegram bot stopped")
+	}
 
 	// Shutdown HTTP server
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Error during server shutdown: %v", err)
 	}
 

@@ -11,6 +11,7 @@ A gamified habit-reward system for small groups combining Web UI and Telegram Bo
 - 🤖 **Telegram Bot**: Complete tasks and check balance via Telegram
 - 📊 **Transaction History**: Immutable ledger tracking all earnings and spending
 - 🎁 **Shop System**: Create rewards and purchase them with earned coins
+- ⏰ **Task Notifications**: Automated deadline reminders via Telegram (see [DESIGN_DUE_AT.md](DESIGN_DUE_AT.md))
 
 ## Prerequisites
 
@@ -169,6 +170,9 @@ If `TELEGRAM_BOT_TOKEN` is configured, you can interact via Telegram:
 
 /complete 43 5
 → Completes integer task with ID 43, quantity 5
+
+/notifications
+→ Enable/disable task deadline notifications
 ```
 
 ## Project Structure
@@ -246,6 +250,28 @@ The project follows clean architecture principles:
 2. **Data Layer** (`internal/store/`): Database access and repositories
 3. **Interface Layer** (`internal/web/`, `internal/bot/`): HTTP and Bot interfaces
 4. **Entry Point** (`cmd/server/`): Application initialization
+
+## Task Notifications
+
+The system includes automated deadline reminders for tasks with due dates:
+
+- **Reminders**: Receive Telegram notifications before and at task deadlines
+- **Action Buttons**: Mark done, snooze 15 mins, or choose custom reminder time
+- **Group Notifications**: All group members receive notifications for group tasks
+- **Settings**: Enable/disable via `/notifications` command
+
+**Default Configuration:**
+- Reminder time: 60 minutes before deadline
+- Snooze duration: 15 minutes
+- Available durations: 30m, 1h, 2h, 4h, 24h
+
+**TODO:**
+- [ ] Add web UI for customizing notification settings per user
+- [ ] Add configurable reminder times and snooze durations
+- [ ] Add quiet hours and per-task notification preferences
+- [ ] Add email and web push notification channels
+
+For technical details, see [DESIGN_DUE_AT.md](DESIGN_DUE_AT.md).
 
 ## Key Features Explained
 

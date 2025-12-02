@@ -1,7 +1,7 @@
 {{define "content"}}
 <div class="container">
     <div class="header">
-        <h1>🛒 Purchase History</h1>
+        <h1>🧺 Market History</h1>
         <p class="subtitle">{{.Group.Name}}</p>
     </div>
 
@@ -23,7 +23,7 @@
                     {{end}}
                 </div>
                 <div class="purchase-cost">
-                    <span class="coins-spent">-{{.ShopItem.Cost}} 🪙</span>
+                    <span class="coins-spent cheese-tag" data-cheese="-{{.ShopItem.Cost}}">-🧀 {{.ShopItem.Cost}}</span>
                 </div>
             </div>
             
@@ -59,8 +59,8 @@
     </div>
     {{else}}
     <div class="empty-state">
-        <p>🛍️ No purchases yet.</p>
-        <p class="empty-hint">Start earning coins and treat yourself!</p>
+        <p>🧺 No purchases yet.</p>
+        <p class="empty-hint">Start earning cheese and treat yourself!</p>
     </div>
     {{end}}
 </div>
@@ -102,11 +102,9 @@
 .purchase-cost {
     font-size: 18px;
     font-weight: 600;
-    color: var(--danger-color);
 }
 
 .coins-spent {
-    color: var(--danger-color);
 }
 
 .purchase-description {

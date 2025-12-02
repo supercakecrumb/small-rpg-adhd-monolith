@@ -17,15 +17,31 @@
 <body>
     <nav class="navbar">
         <div class="container">
-            <h1 class="logo">🐀 RatPG</h1>
+            <div class="nav-left">
+                <a href="/dashboard" class="logo-link">
+                    <h1 class="logo">🐀 RatPG</h1>
+                </a>
+                <span class="nav-current">
+                    {{if .Group}}
+                        {{.Group.Name}}
+                    {{else}}
+                        The Burrow
+                    {{end}}
+                </span>
+            </div>
             {{if .Username}}
             <div class="nav-links">
-                {{if .UserPhotoURL}}
-                <img src="{{.UserPhotoURL}}" alt="{{.Username}}'s avatar" class="user-avatar" loading="lazy">
-                {{else}}
-                <span class="username">👤 {{.Username}}</span>
+                <div class="user-chip">
+                    <span class="avatar-emoji" data-username="{{.Username}}"></span>
+                    <div class="user-chip-text">
+                        <span class="username">{{.Username}}</span>
+                        <span class="user-chip-subtle">in the Burrow</span>
+                    </div>
+                </div>
+                {{if .Group}}
+                <span class="cheese-pill" data-cheese="{{.Balance}}" data-no-animate="true">🧀 {{.Balance}}</span>
                 {{end}}
-                <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
+                <a href="/dashboard" class="btn btn-secondary">The Burrow</a>
                 <a href="/logout" class="btn btn-outline">Logout</a>
             </div>
             {{end}}
@@ -41,5 +57,153 @@
             <p>Made with ❤️ for ADHD brains</p>
         </div>
     </footer>
+
+    <script>
+    (function () {
+        const rarityClass = (val) => {
+            const n = Math.abs(Number(val) || 0);
+            if (n >= 200) return 'rarity-gold';
+            if (n >= 51) return 'rarity-purple';
+            if (n >= 11) return 'rarity-blue';
+            return 'rarity-neutral';
+        };
+
+        const formatCheese = (val) => {
+            const n = Number(val) || 0;
+            return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        };
+
+        const applyCheeseTag = (el, amount) => {
+            if (!el) return;
+            const n = Number(amount);
+            const rarity = rarityClass(n);
+            el.dataset.cheese = n;
+            if (!el.dataset.intensity) {
+                el.dataset.intensity = rarity === 'rarity-gold' ? '3' : rarity === 'rarity-purple' ? '2' : rarity === 'rarity-blue' ? '1' : '0';
+            }
+            el.classList.add('cheese-tag');
+            el.classList.remove('rarity-neutral', 'rarity-blue', 'rarity-purple', 'rarity-gold');
+            el.classList.add(rarity);
+            const prefix = n < 0 ? '− ' : '';
+            el.textContent = `🧀 ${prefix}${formatCheese(Math.abs(n))}`;
+        };
+
+        const applyCheeseTags = () => {
+            document.querySelectorAll('.cheese-tag').forEach((el) => {
+                const raw = el.dataset.cheese || el.textContent;
+                applyCheeseTag(el, raw.toString().replace(/[^\d-]/g, '') || 0);
+            });
+        };
+
+        const animateCount = (el, target) => {
+            const duration = 450;
+            const start = performance.now();
+            const from = 0;
+            const to = Number(target) || 0;
+            const step = (now) => {
+                const progress = Math.min(1, (now - start) / duration);
+                const current = Math.round(from + (to - from) * progress);
+                el.textContent = `🧀 ${formatCheese(current)}`;
+                if (progress < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        };
+
+        const animateCheesePills = () => {
+            document.querySelectorAll('.cheese-pill').forEach((pill) => {
+                if (pill.dataset.noAnimate === 'true') return;
+                const target = pill.dataset.cheese || pill.textContent.replace(/[^\d-]/g, '') || 0;
+                animateCount(pill, target);
+            });
+        };
+
+        const updateQuestTotalFromInput = (input) => {
+            if (!input) return;
+            const taskItem = input.closest('.task-item');
+            const tag = taskItem ? taskItem.querySelector('.total-reward-tag') : null;
+            const base = tag ? Number(tag.dataset.baseCheese || tag.dataset.cheese || input.dataset.baseCheese || 0) : Number(input.dataset.baseCheese || 0);
+            const qty = Math.max(1, Number(input.value) || 1);
+            if (tag) {
+                const total = base * qty;
+                tag.dataset.cheese = total;
+                const ratio = base > 0 ? total / base : 1;
+                let level = 0;
+                if (ratio >= 4) level = 3;
+                else if (ratio >= 2.5) level = 2;
+                else if (ratio > 1.25) level = 1;
+                tag.dataset.intensity = level.toString();
+                applyCheeseTag(tag, total);
+            }
+        };
+
+        const initQuantityTotals = () => {
+            document.querySelectorAll('.total-reward-tag').forEach((tag) => {
+                const taskItem = tag.closest('.task-item');
+                const qtyInput = taskItem ? taskItem.querySelector('.quantity-input') : null;
+                if (qtyInput) {
+                    updateQuestTotalFromInput(qtyInput);
+                    qtyInput.addEventListener('input', () => updateQuestTotalFromInput(qtyInput));
+                } else {
+                    applyCheeseTag(tag, tag.dataset.cheese || 0);
+                }
+            });
+        };
+
+        const initActionAnimations = () => {
+            document.querySelectorAll('.finish-quest-btn').forEach((btn) => {
+                const form = btn.closest('form');
+                if (form) {
+                    form.addEventListener('submit', () => {
+                        btn.classList.add('pulse-success');
+                        const card = btn.closest('.task-item');
+                        if (card) card.classList.add('row-highlight');
+                        setTimeout(() => {
+                            btn.classList.remove('pulse-success');
+                            if (card) card.classList.remove('row-highlight');
+                        }, 600);
+                    });
+                }
+            });
+
+            document.querySelectorAll('.buy-btn').forEach((btn) => {
+                const form = btn.closest('form');
+                if (form) {
+                    form.addEventListener('submit', () => {
+                        btn.classList.add('pulse-buy');
+                        setTimeout(() => btn.classList.remove('pulse-buy'), 600);
+                    });
+                }
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyCheeseTags();
+            initQuantityTotals();
+            animateCheesePills();
+            initActionAnimations();
+            document.querySelectorAll('.avatar-emoji').forEach((avatar) => {
+                const key = avatar.dataset.userid || avatar.dataset.username || avatar.textContent || 'rat';
+                const emojis = ['🗡️', '🧙', '🧪', '🧚', '🏳️‍🌈'];
+                let hash = 0;
+                for (let i = 0; i < key.length; i += 1) {
+                    hash = ((hash << 5) - hash) + key.charCodeAt(i);
+                    hash |= 0;
+                }
+                const emoji = emojis[Math.abs(hash) % emojis.length];
+                avatar.textContent = emoji;
+            });
+        });
+
+        window.ratpgUI = {
+            applyCheeseTag,
+            applyCheeseTags,
+            initQuantityTotals,
+            updateQuestTotalFromInput,
+            initActionAnimations,
+            animateCheesePills,
+            formatCheese,
+        };
+    })();
+    </script>
 </body>
 </html>
