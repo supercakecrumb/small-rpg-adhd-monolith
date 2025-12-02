@@ -49,6 +49,7 @@ func (s *Store) migrate() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
 		invite_code TEXT UNIQUE NOT NULL,
+		owner_id INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
@@ -168,6 +169,10 @@ func (s *Store) migrate() error {
 		return fmt.Errorf("failed to migrate user language column: %w", err)
 	}
 
+	if err := s.migrateGroupOwner(); err != nil {
+		return fmt.Errorf("failed to migrate group owner column: %w", err)
+	}
+
 	return nil
 }
 
@@ -175,6 +180,15 @@ func (s *Store) migrate() error {
 func (s *Store) migrateUserLanguage() error {
 	_, err := s.DB.Exec(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'`)
 	if err != nil && err.Error() != "duplicate column name: language" {
+		return err
+	}
+	return nil
+}
+
+// migrateGroupOwner adds owner_id column to groups table if it doesn't exist
+func (s *Store) migrateGroupOwner() error {
+	_, err := s.DB.Exec(`ALTER TABLE groups ADD COLUMN owner_id INTEGER DEFAULT 0`)
+	if err != nil && err.Error() != "duplicate column name: owner_id" {
 		return err
 	}
 	return nil

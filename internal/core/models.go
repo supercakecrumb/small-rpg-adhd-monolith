@@ -16,6 +16,7 @@ type Group struct {
 	ID         int64
 	Name       string
 	InviteCode string
+	OwnerID    int64
 	CreatedAt  time.Time
 }
 

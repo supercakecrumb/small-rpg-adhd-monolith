@@ -292,13 +292,13 @@
             <h3>👥 Party</h3>
             {{if .Members}}
             <div class="members-list">
-                {{range $i, $member := .Members}}
+                {{range .Members}}
                 <div class="member-item">
                     <div class="member-identity">
-                        <span class="avatar-emoji party-avatar {{if eq $i 0}}owner-avatar{{end}}" data-username="{{$member.Username}}" {{if eq $i 0}}data-owner="true"{{end}}></span>
+                        <span class="avatar-emoji party-avatar {{if eq .ID $.Group.OwnerID}}owner-avatar{{end}}" data-username="{{.Username}}" {{if eq .ID $.Group.OwnerID}}data-owner="true"{{end}}></span>
                         <div class="member-meta">
-                            <span class="member-name">{{$member.Username}}</span>
-                            {{if eq $i 0}}<span class="member-role">Party founder</span>{{end}}
+                            <span class="member-name">{{.Username}}</span>
+                            {{if eq .ID $.Group.OwnerID}}<span class="member-role">{{t $.Locale "group.party.owner"}}</span>{{end}}
                         </div>
                     </div>
                 </div>

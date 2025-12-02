@@ -7,10 +7,10 @@ import (
 )
 
 // CreateGroup creates a new group with an invite code
-func (s *Store) CreateGroup(name, inviteCode string) (*core.Group, error) {
+func (s *Store) CreateGroup(name, inviteCode string, ownerID int64) (*core.Group, error) {
 	result, err := s.DB.Exec(
-		"INSERT INTO groups (name, invite_code) VALUES (?, ?)",
-		name, inviteCode,
+		"INSERT INTO groups (name, invite_code, owner_id) VALUES (?, ?, ?)",
+		name, inviteCode, ownerID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create group: %w", err)
@@ -29,9 +29,9 @@ func (s *Store) GetGroupByID(id int64) (*core.Group, error) {
 	group := &core.Group{}
 
 	err := s.DB.QueryRow(
-		"SELECT id, name, invite_code, created_at FROM groups WHERE id = ?",
+		"SELECT id, name, invite_code, owner_id, created_at FROM groups WHERE id = ?",
 		id,
-	).Scan(&group.ID, &group.Name, &group.InviteCode, &group.CreatedAt)
+	).Scan(&group.ID, &group.Name, &group.InviteCode, &group.OwnerID, &group.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -48,9 +48,9 @@ func (s *Store) GetGroupByInviteCode(inviteCode string) (*core.Group, error) {
 	group := &core.Group{}
 
 	err := s.DB.QueryRow(
-		"SELECT id, name, invite_code, created_at FROM groups WHERE invite_code = ?",
+		"SELECT id, name, invite_code, owner_id, created_at FROM groups WHERE invite_code = ?",
 		inviteCode,
-	).Scan(&group.ID, &group.Name, &group.InviteCode, &group.CreatedAt)
+	).Scan(&group.ID, &group.Name, &group.InviteCode, &group.OwnerID, &group.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -65,7 +65,7 @@ func (s *Store) GetGroupByInviteCode(inviteCode string) (*core.Group, error) {
 // GetGroupsByUserID retrieves all groups a user is a member of
 func (s *Store) GetGroupsByUserID(userID int64) ([]*core.Group, error) {
 	rows, err := s.DB.Query(`
-		SELECT g.id, g.name, g.invite_code, g.created_at
+		SELECT g.id, g.name, g.invite_code, g.owner_id, g.created_at
 		FROM groups g
 		INNER JOIN group_members gm ON g.id = gm.group_id
 		WHERE gm.user_id = ?
@@ -78,7 +78,7 @@ func (s *Store) GetGroupsByUserID(userID int64) ([]*core.Group, error) {
 	var groups []*core.Group
 	for rows.Next() {
 		group := &core.Group{}
-		if err := rows.Scan(&group.ID, &group.Name, &group.InviteCode, &group.CreatedAt); err != nil {
+		if err := rows.Scan(&group.ID, &group.Name, &group.InviteCode, &group.OwnerID, &group.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan group: %w", err)
 		}
 		groups = append(groups, group)

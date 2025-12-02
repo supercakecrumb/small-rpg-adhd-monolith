@@ -20,7 +20,7 @@ type Store interface {
 	UpdateUserLanguage(userID int64, language string) error
 
 	// Group operations
-	CreateGroup(name, inviteCode string) (*Group, error)
+	CreateGroup(name, inviteCode string, ownerID int64) (*Group, error)
 	GetGroupByID(id int64) (*Group, error)
 	GetGroupByInviteCode(inviteCode string) (*Group, error)
 	GetGroupsByUserID(userID int64) ([]*Group, error)
@@ -123,7 +123,7 @@ func (s *Service) CreateGroup(name string, creatorUserID int64) (*Group, error) 
 		return nil, fmt.Errorf("failed to generate invite code: %w", err)
 	}
 
-	group, err := s.store.CreateGroup(name, inviteCode)
+	group, err := s.store.CreateGroup(name, inviteCode, creatorUserID)
 	if err != nil {
 		return nil, err
 	}
