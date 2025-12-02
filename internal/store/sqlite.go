@@ -67,6 +67,7 @@ func (s *Store) migrate() error {
 		description TEXT,
 		task_type TEXT CHECK(task_type IN ('boolean', 'integer')) NOT NULL,
 		reward_value INTEGER NOT NULL,
+		is_one_time BOOLEAN DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(group_id) REFERENCES groups(id)
 	);
@@ -77,6 +78,7 @@ func (s *Store) migrate() error {
 		title TEXT NOT NULL,
 		description TEXT,
 		cost INTEGER NOT NULL,
+		is_one_time BOOLEAN DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(group_id) REFERENCES groups(id)
 	);
@@ -124,6 +126,75 @@ func (s *Store) migrate() error {
 	_, err := s.DB.Exec(schema)
 	if err != nil {
 		return fmt.Errorf("failed to execute schema: %w", err)
+	}
+
+	// Run migrations for existing databases
+	if err := s.migrateIsOneTime(); err != nil {
+		return fmt.Errorf("failed to migrate is_one_time columns: %w", err)
+	}
+
+	if err := s.migrateQuantity(); err != nil {
+		return fmt.Errorf("failed to migrate quantity column: %w", err)
+	}
+
+	if err := s.migrateCancelledAt(); err != nil {
+		return fmt.Errorf("failed to migrate cancelled_at column: %w", err)
+	}
+
+	return nil
+}
+
+// migrateIsOneTime adds is_one_time columns to existing tables if they don't exist
+func (s *Store) migrateIsOneTime() error {
+	// Try to add is_one_time column to tasks table
+	// This will fail silently if column already exists
+	_, err := s.DB.Exec(`ALTER TABLE tasks ADD COLUMN is_one_time BOOLEAN DEFAULT 0`)
+	if err != nil {
+		// Check if error is due to column already existing (which is fine)
+		// SQLite returns "duplicate column name" error
+		if err.Error() != "duplicate column name: is_one_time" {
+			// Only log non-duplicate errors, but don't fail
+			// Column might already exist from previous migration
+		}
+	}
+
+	// Try to add is_one_time column to shop_items table
+	_, err = s.DB.Exec(`ALTER TABLE shop_items ADD COLUMN is_one_time BOOLEAN DEFAULT 0`)
+	if err != nil {
+		// Check if error is due to column already existing (which is fine)
+		if err.Error() != "duplicate column name: is_one_time" {
+			// Only log non-duplicate errors, but don't fail
+		}
+	}
+
+	return nil
+}
+
+// migrateQuantity adds quantity column to transactions table if it doesn't exist
+func (s *Store) migrateQuantity() error {
+	// Try to add quantity column to transactions table
+	// This will fail silently if column already exists
+	_, err := s.DB.Exec(`ALTER TABLE transactions ADD COLUMN quantity INTEGER DEFAULT 1`)
+	if err != nil {
+		// Check if error is due to column already existing (which is fine)
+		if err.Error() != "duplicate column name: quantity" {
+			// Only log non-duplicate errors, but don't fail
+		}
+	}
+
+	return nil
+}
+
+// migrateCancelledAt adds cancelled_at column to purchases table if it doesn't exist
+func (s *Store) migrateCancelledAt() error {
+	// Try to add cancelled_at column to purchases table
+	// This will fail silently if column already exists
+	_, err := s.DB.Exec(`ALTER TABLE purchases ADD COLUMN cancelled_at DATETIME`)
+	if err != nil {
+		// Check if error is due to column already existing (which is fine)
+		if err.Error() != "duplicate column name: cancelled_at" {
+			// Only log non-duplicate errors, but don't fail
+		}
 	}
 
 	return nil

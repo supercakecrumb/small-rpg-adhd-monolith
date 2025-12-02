@@ -9,8 +9,8 @@ import (
 )
 
 type loginPageData struct {
-	Username string
-	Error    string
+	basePageData
+	Error string
 }
 
 // handleLoginPage displays the login page

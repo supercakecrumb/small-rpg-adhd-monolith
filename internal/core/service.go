@@ -24,17 +24,17 @@ type Store interface {
 	IsUserInGroup(userID, groupID int64) (bool, error)
 
 	// Task operations
-	CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int) (*Task, error)
+	CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) (*Task, error)
 	GetTaskByID(id int64) (*Task, error)
 	GetTasksByGroupID(groupID int64) ([]*Task, error)
-	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int) error
+	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) error
 	DeleteTask(id int64) error
 
 	// Shop operations
-	CreateShopItem(groupID int64, title, description string, cost int) (*ShopItem, error)
+	CreateShopItem(groupID int64, title, description string, cost int, isOneTime bool) (*ShopItem, error)
 	GetShopItemByID(id int64) (*ShopItem, error)
 	GetShopItemsByGroupID(groupID int64) ([]*ShopItem, error)
-	UpdateShopItem(id int64, title, description string, cost int) error
+	UpdateShopItem(id int64, title, description string, cost int, isOneTime bool) error
 	DeleteShopItem(id int64) error
 
 	// Transaction operations
@@ -49,6 +49,7 @@ type Store interface {
 	GetPurchasesByUserAndGroup(userID, groupID int64) ([]*Purchase, error)
 	GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*PurchaseHistory, error)
 	MarkPurchaseFulfilled(purchaseID, fulfilledByUserID int64, notes string) error
+	CancelPurchaseByTransactionID(transactionID int64) error
 
 	// Profile operations
 	GetUserProfile(userID int64) (*UserProfile, error)
@@ -151,7 +152,7 @@ func (s *Service) JoinGroup(userID int64, inviteCode string) (*Group, error) {
 }
 
 // CreateTask creates a new task in a group
-func (s *Service) CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int) (*Task, error) {
+func (s *Service) CreateTask(groupID int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) (*Task, error) {
 	if title == "" {
 		return nil, fmt.Errorf("task title cannot be empty")
 	}
@@ -162,7 +163,7 @@ func (s *Service) CreateTask(groupID int64, title, description string, taskType 
 		return nil, fmt.Errorf("reward value must be positive")
 	}
 
-	return s.store.CreateTask(groupID, title, description, taskType, rewardValue)
+	return s.store.CreateTask(groupID, title, description, taskType, rewardValue, isOneTime)
 }
 
 // GetTasksByGroupID retrieves all tasks for a group
@@ -220,11 +221,20 @@ func (s *Service) CompleteTask(userID, taskID int64, quantity *int) (*Transactio
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
+	// If task is one-time, delete it after completion
+	if task.IsOneTime {
+		if err := s.store.DeleteTask(task.ID); err != nil {
+			// Log error but don't fail the transaction
+			// The transaction was successful, deletion is secondary
+			_ = err
+		}
+	}
+
 	return transaction, nil
 }
 
 // UpdateTask updates an existing task
-func (s *Service) UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int) error {
+func (s *Service) UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, isOneTime bool) error {
 	if title == "" {
 		return fmt.Errorf("task title cannot be empty")
 	}
@@ -235,7 +245,7 @@ func (s *Service) UpdateTask(id int64, title, description string, taskType TaskT
 		return fmt.Errorf("reward value must be positive")
 	}
 
-	return s.store.UpdateTask(id, title, description, taskType, rewardValue)
+	return s.store.UpdateTask(id, title, description, taskType, rewardValue, isOneTime)
 }
 
 // DeleteTask deletes a task
@@ -244,7 +254,7 @@ func (s *Service) DeleteTask(id int64) error {
 }
 
 // CreateShopItem creates a new shop item in a group
-func (s *Service) CreateShopItem(groupID int64, title, description string, cost int) (*ShopItem, error) {
+func (s *Service) CreateShopItem(groupID int64, title, description string, cost int, isOneTime bool) (*ShopItem, error) {
 	if title == "" {
 		return nil, fmt.Errorf("shop item title cannot be empty")
 	}
@@ -252,7 +262,7 @@ func (s *Service) CreateShopItem(groupID int64, title, description string, cost 
 		return nil, fmt.Errorf("cost must be positive")
 	}
 
-	return s.store.CreateShopItem(groupID, title, description, cost)
+	return s.store.CreateShopItem(groupID, title, description, cost, isOneTime)
 }
 
 // GetShopItemsByGroupID retrieves all shop items for a group
@@ -261,7 +271,7 @@ func (s *Service) GetShopItemsByGroupID(groupID int64) ([]*ShopItem, error) {
 }
 
 // UpdateShopItem updates an existing shop item
-func (s *Service) UpdateShopItem(id int64, title, description string, cost int) error {
+func (s *Service) UpdateShopItem(id int64, title, description string, cost int, isOneTime bool) error {
 	if title == "" {
 		return fmt.Errorf("shop item title cannot be empty")
 	}
@@ -269,7 +279,7 @@ func (s *Service) UpdateShopItem(id int64, title, description string, cost int) 
 		return fmt.Errorf("cost must be positive")
 	}
 
-	return s.store.UpdateShopItem(id, title, description, cost)
+	return s.store.UpdateShopItem(id, title, description, cost, isOneTime)
 }
 
 // DeleteShopItem deletes a shop item
@@ -322,6 +332,15 @@ func (s *Service) BuyItem(userID, itemID int64) (*Transaction, error) {
 		return nil, fmt.Errorf("failed to create purchase record: %w", err)
 	}
 	_ = purchase // Purchase record created successfully
+
+	// If item is one-time, delete it after purchase
+	if item.IsOneTime {
+		if err := s.store.DeleteShopItem(item.ID); err != nil {
+			// Log error but don't fail the transaction
+			// The transaction was successful, deletion is secondary
+			_ = err
+		}
+	}
 
 	return transaction, nil
 }
@@ -379,6 +398,55 @@ func (s *Service) GetTaskByID(id int64) (*Task, error) {
 // GetShopItemByID retrieves a shop item by ID
 func (s *Service) GetShopItemByID(id int64) (*ShopItem, error) {
 	return s.store.GetShopItemByID(id)
+}
+
+// UndoTransaction creates a reversal transaction to undo a completed task or purchase
+func (s *Service) UndoTransaction(userID, transactionID int64) error {
+	// Get the original transaction
+	transaction, err := s.store.GetTransactionByID(transactionID)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction: %w", err)
+	}
+
+	// Verify the transaction belongs to the user
+	if transaction.UserID != userID {
+		return fmt.Errorf("transaction does not belong to this user")
+	}
+
+	// Verify user is still in the group
+	isMember, err := s.store.IsUserInGroup(userID, transaction.GroupID)
+	if err != nil {
+		return err
+	}
+	if !isMember {
+		return fmt.Errorf("user is not a member of this group")
+	}
+
+	// Create reversal transaction (negative of original amount)
+	reversalAmount := -transaction.Amount
+	_, err = s.store.CreateTransaction(
+		transaction.UserID,
+		transaction.GroupID,
+		reversalAmount,
+		transaction.SourceType,
+		transaction.SourceID,
+		transaction.Quantity,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create reversal transaction: %w", err)
+	}
+
+	// If this was a purchase transaction, mark the purchase as cancelled
+	if transaction.SourceType == SourceTypeShopItem && transaction.Amount < 0 {
+		// Find the purchase record for this transaction
+		if err := s.store.CancelPurchaseByTransactionID(transactionID); err != nil {
+			// Log error but don't fail - the reversal transaction was successful
+			// The cancelled_at field helps track that this was undone
+			_ = err
+		}
+	}
+
+	return nil
 }
 
 // generateInviteCode generates a random invite code

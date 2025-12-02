@@ -1,6 +1,7 @@
 package web
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -9,14 +10,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type basePageData struct {
+	Username     string
+	UserPhotoURL string
+}
+
 type dashboardData struct {
-	Username string
-	Groups   []*core.Group
-	Error    string
+	basePageData
+	Groups []*core.Group
+	Error  string
 }
 
 type groupViewData struct {
-	Username  string
+	basePageData
 	Group     *core.Group
 	Tasks     []*core.Task
 	ShopItems []*core.ShopItem
@@ -24,6 +30,24 @@ type groupViewData struct {
 	Balance   int
 	Error     string
 	Success   string
+}
+
+func (s *Server) buildBasePageData(user *core.User) basePageData {
+	data := basePageData{
+		Username: user.Username,
+	}
+
+	profile, err := s.service.GetUserProfile(user.ID)
+	if err != nil {
+		log.Printf("Failed to load user profile for %d: %v", user.ID, err)
+		return data
+	}
+
+	if profile != nil {
+		data.UserPhotoURL = profile.TelegramPhotoURL
+	}
+
+	return data
 }
 
 // handleDashboard displays the user's dashboard with their groups
@@ -43,8 +67,8 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := dashboardData{
-		Username: user.Username,
-		Groups:   groups,
+		basePageData: s.buildBasePageData(user),
+		Groups:       groups,
 	}
 
 	s.renderTemplate(w, "dashboard.html", data)
@@ -153,14 +177,14 @@ func (s *Server) handleGroupView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := groupViewData{
-		Username:  user.Username,
-		Group:     group,
-		Tasks:     tasks,
-		ShopItems: shopItems,
-		Members:   members,
-		Balance:   balance,
-		Success:   r.URL.Query().Get("success"),
-		Error:     r.URL.Query().Get("error"),
+		basePageData: s.buildBasePageData(user),
+		Group:        group,
+		Tasks:        tasks,
+		ShopItems:    shopItems,
+		Members:      members,
+		Balance:      balance,
+		Success:      r.URL.Query().Get("success"),
+		Error:        r.URL.Query().Get("error"),
 	}
 
 	s.renderTemplate(w, "group.html", data)
@@ -184,6 +208,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	description := r.FormValue("description")
 	taskTypeStr := r.FormValue("task_type")
 	rewardValueStr := r.FormValue("reward_value")
+	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || taskTypeStr == "" || rewardValueStr == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
@@ -197,7 +222,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.service.CreateTask(groupID, title, description, taskType, rewardValue)
+	_, err = s.service.CreateTask(groupID, title, description, taskType, rewardValue, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+groupIDStr+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -269,6 +294,7 @@ func (s *Server) handleCreateShopItem(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 	costStr := r.FormValue("cost")
+	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || costStr == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
@@ -281,7 +307,7 @@ func (s *Server) handleCreateShopItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.service.CreateShopItem(groupID, title, description, cost)
+	_, err = s.service.CreateShopItem(groupID, title, description, cost, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+groupIDStr+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -342,6 +368,7 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	description := r.FormValue("description")
 	taskTypeStr := r.FormValue("task_type")
 	rewardValueStr := r.FormValue("reward_value")
+	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || taskTypeStr == "" || rewardValueStr == "" {
 		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error=Missing required fields", http.StatusSeeOther)
@@ -355,7 +382,7 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.service.UpdateTask(taskID, title, description, taskType, rewardValue)
+	err = s.service.UpdateTask(taskID, title, description, taskType, rewardValue, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -413,6 +440,7 @@ func (s *Server) handleUpdateShopItem(w http.ResponseWriter, r *http.Request) {
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 	costStr := r.FormValue("cost")
+	isOneTime := r.FormValue("is_one_time") == "on"
 
 	if title == "" || costStr == "" {
 		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error=Missing required fields", http.StatusSeeOther)
@@ -425,7 +453,7 @@ func (s *Server) handleUpdateShopItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.service.UpdateShopItem(itemID, title, description, cost)
+	err = s.service.UpdateShopItem(itemID, title, description, cost, isOneTime)
 	if err != nil {
 		http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?error="+err.Error(), http.StatusSeeOther)
 		return
@@ -459,14 +487,14 @@ func (s *Server) handleDeleteShopItem(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Shop item deleted", http.StatusSeeOther)
 }
 
-type taskHistoryData struct {
-	Username string
-	Group    *core.Group
-	History  []*core.TaskCompletionHistory
+type taskLogData struct {
+	basePageData
+	Group *core.Group
+	Log   []*core.TaskCompletionHistory
 }
 
-// handleTaskHistory displays task completion history
-func (s *Server) handleTaskHistory(w http.ResponseWriter, r *http.Request) {
+// handleTaskLog displays task completion log
+func (s *Server) handleTaskLog(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
 
 	groupIDStr := chi.URLParam(r, "groupID")
@@ -488,29 +516,30 @@ func (s *Server) handleTaskHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	history, err := s.service.GetTaskCompletionHistory(userID, groupID)
+	taskLog, err := s.service.GetTaskCompletionHistory(userID, groupID)
 	if err != nil {
-		http.Error(w, "Failed to load history", http.StatusInternalServerError)
+		log.Printf("Error loading task completion history: %v", err)
+		http.Error(w, "Failed to load log", http.StatusInternalServerError)
 		return
 	}
 
-	data := taskHistoryData{
-		Username: user.Username,
-		Group:    group,
-		History:  history,
+	data := taskLogData{
+		basePageData: s.buildBasePageData(user),
+		Group:        group,
+		Log:          taskLog,
 	}
 
-	s.renderTemplate(w, "task_history.html", data)
+	s.renderTemplate(w, "task_log.html", data)
 }
 
-type purchaseHistoryData struct {
-	Username string
-	Group    *core.Group
-	History  []*core.PurchaseHistory
+type purchaseLogData struct {
+	basePageData
+	Group *core.Group
+	Log   []*core.PurchaseHistory
 }
 
-// handlePurchaseHistory displays purchase history
-func (s *Server) handlePurchaseHistory(w http.ResponseWriter, r *http.Request) {
+// handlePurchaseLog displays purchase log
+func (s *Server) handlePurchaseLog(w http.ResponseWriter, r *http.Request) {
 	userID, _ := s.getUserID(r)
 
 	groupIDStr := chi.URLParam(r, "groupID")
@@ -532,19 +561,19 @@ func (s *Server) handlePurchaseHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	history, err := s.service.GetPurchaseHistory(userID, groupID)
+	log, err := s.service.GetPurchaseHistory(userID, groupID)
 	if err != nil {
-		http.Error(w, "Failed to load history", http.StatusInternalServerError)
+		http.Error(w, "Failed to load log", http.StatusInternalServerError)
 		return
 	}
 
-	data := purchaseHistoryData{
-		Username: user.Username,
-		Group:    group,
-		History:  history,
+	data := purchaseLogData{
+		basePageData: s.buildBasePageData(user),
+		Group:        group,
+		Log:          log,
 	}
 
-	s.renderTemplate(w, "purchase_history.html", data)
+	s.renderTemplate(w, "purchase_log.html", data)
 }
 
 // handleMarkPurchaseFulfilled marks a purchase as fulfilled
@@ -569,7 +598,7 @@ func (s *Server) handleMarkPurchaseFulfilled(w http.ResponseWriter, r *http.Requ
 	err = s.service.MarkPurchaseFulfilled(purchaseID, userID, notes)
 	if err != nil {
 		if groupIDStr != "" {
-			http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases?error="+err.Error(), http.StatusSeeOther)
+			http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases/log?error="+err.Error(), http.StatusSeeOther)
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -577,7 +606,55 @@ func (s *Server) handleMarkPurchaseFulfilled(w http.ResponseWriter, r *http.Requ
 	}
 
 	if groupIDStr != "" {
-		http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases?success=Purchase marked as fulfilled", http.StatusSeeOther)
+		http.Redirect(w, r, "/groups/"+groupIDStr+"/purchases/log?success=Purchase marked as fulfilled", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	}
+}
+
+// handleUndoTransaction undoes a transaction by creating a reversal transaction
+func (s *Server) handleUndoTransaction(w http.ResponseWriter, r *http.Request) {
+	userID, _ := s.getUserID(r)
+
+	transactionIDStr := chi.URLParam(r, "transactionID")
+	transactionID, err := strconv.ParseInt(transactionIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid transaction ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	// Get referer to determine redirect location
+	groupIDStr := r.FormValue("group_id")
+
+	err = s.service.UndoTransaction(userID, transactionID)
+	if err != nil {
+		if groupIDStr != "" {
+			// Try to redirect based on source type
+			referer := r.Header.Get("Referer")
+			if referer != "" {
+				http.Redirect(w, r, referer+"?error="+err.Error(), http.StatusSeeOther)
+			} else {
+				http.Redirect(w, r, "/groups/"+groupIDStr+"?error="+err.Error(), http.StatusSeeOther)
+			}
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Redirect back to the appropriate log page
+	if groupIDStr != "" {
+		referer := r.Header.Get("Referer")
+		if referer != "" {
+			http.Redirect(w, r, referer+"?success=Transaction undone successfully", http.StatusSeeOther)
+		} else {
+			http.Redirect(w, r, "/groups/"+groupIDStr+"?success=Transaction undone successfully", http.StatusSeeOther)
+		}
 	} else {
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	}

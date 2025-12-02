@@ -163,6 +163,31 @@ func (s *Store) MarkPurchaseFulfilled(purchaseID, fulfilledByUserID int64, notes
 	return nil
 }
 
+// CancelPurchaseByTransactionID marks a purchase as cancelled by transaction ID
+func (s *Store) CancelPurchaseByTransactionID(transactionID int64) error {
+	query := `
+		UPDATE purchases
+		SET cancelled_at = ?
+		WHERE transaction_id = ? AND cancelled_at IS NULL
+	`
+
+	now := time.Now()
+	result, err := s.DB.Exec(query, now, transactionID)
+	if err != nil {
+		return fmt.Errorf("failed to cancel purchase: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	// It's okay if no rows were affected - might not be a purchase transaction
+	_ = rowsAffected
+
+	return nil
+}
+
 // GetPurchaseHistoryByUserAndGroup retrieves detailed purchase history
 func (s *Store) GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*core.PurchaseHistory, error) {
 	query := `

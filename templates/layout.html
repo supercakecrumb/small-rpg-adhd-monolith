@@ -20,7 +20,11 @@
             <h1 class="logo">🐀 RatPG</h1>
             {{if .Username}}
             <div class="nav-links">
+                {{if .UserPhotoURL}}
+                <img src="{{.UserPhotoURL}}" alt="{{.Username}}'s avatar" class="user-avatar" loading="lazy">
+                {{else}}
                 <span class="username">👤 {{.Username}}</span>
+                {{end}}
                 <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
                 <a href="/logout" class="btn btn-outline">Logout</a>
             </div>

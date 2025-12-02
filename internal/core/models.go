@@ -41,6 +41,7 @@ type Task struct {
 	Description string
 	TaskType    TaskType
 	RewardValue int // Coins per completion or per unit
+	IsOneTime   bool
 	CreatedAt   time.Time
 }
 
@@ -51,6 +52,7 @@ type ShopItem struct {
 	Title       string
 	Description string
 	Cost        int
+	IsOneTime   bool
 	CreatedAt   time.Time
 }
 

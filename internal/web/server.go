@@ -113,9 +113,12 @@ func (s *Server) Router() http.Handler {
 		r.Post("/shop/{itemID}/delete", s.handleDeleteShopItem)
 
 		// History routes
-		r.Get("/groups/{groupID}/tasks/history", s.handleTaskHistory)
-		r.Get("/groups/{groupID}/purchases", s.handlePurchaseHistory)
+		r.Get("/groups/{groupID}/tasks/log", s.handleTaskLog)
+		r.Get("/groups/{groupID}/purchases/log", s.handlePurchaseLog)
 		r.Post("/purchases/{purchaseID}/fulfill", s.handleMarkPurchaseFulfilled)
+
+		// Transaction undo route
+		r.Post("/transactions/{transactionID}/undo", s.handleUndoTransaction)
 	})
 
 	return r

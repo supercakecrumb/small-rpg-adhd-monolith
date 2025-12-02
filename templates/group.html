@@ -12,8 +12,8 @@
     </div>
 
     <div class="quick-links">
-        <a href="/groups/{{.Group.ID}}/tasks/history" class="quick-link">📜 Task History</a>
-        <a href="/groups/{{.Group.ID}}/purchases" class="quick-link">🛒 Purchase History</a>
+        <a href="/groups/{{.Group.ID}}/tasks/log" class="quick-link">📜 Task Log</a>
+        <a href="/groups/{{.Group.ID}}/purchases/log" class="quick-link">🛒 Purchase Log</a>
     </div>
 
     {{if .Success}}
@@ -55,6 +55,12 @@
                             <input type="number" id="reward_value" name="reward_value" min="1" required>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="is_one_time" id="is_one_time">
+                            <span>One-time task (remove after completion)</span>
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-primary">Create Task</button>
                 </form>
             </div>
@@ -71,6 +77,7 @@
                         <div class="task-badges">
                             <span class="badge badge-reward">🪙 {{.RewardValue}}{{if eq .TaskType "integer"}} per unit{{end}}</span>
                             <span class="badge badge-type">{{.TaskType}}</span>
+                            {{if .IsOneTime}}<span class="badge badge-one-time">🔄 One-time</span>{{end}}
                         </div>
                     </div>
                     <div class="task-actions">
@@ -105,6 +112,12 @@
                                     <option value="integer" {{if eq .TaskType "integer"}}selected{{end}}>Countable</option>
                                 </select>
                                 <input type="number" name="reward_value" value="{{.RewardValue}}" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="is_one_time" {{if .IsOneTime}}checked{{end}}>
+                                    <span>One-time task (remove after completion)</span>
+                                </label>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-sm btn-primary">Save</button>
@@ -141,6 +154,12 @@
                         <label for="cost">Cost (coins)</label>
                         <input type="number" id="cost" name="cost" min="1" required>
                     </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="is_one_time" id="shop_is_one_time">
+                            <span>One-time item (remove after purchase)</span>
+                        </label>
+                    </div>
                     <button type="submit" class="btn btn-primary">Create Item</button>
                 </form>
             </div>
@@ -161,6 +180,7 @@
                     {{if .Description}}
                     <p class="text-muted">{{.Description}}</p>
                     {{end}}
+                    {{if .IsOneTime}}<div class="shop-item-badge"><span class="badge badge-one-time">🔄 One-time</span></div>{{end}}
                     <div class="shop-item-footer">
                         <span class="price">🪙 {{.Cost}}</span>
                         <form method="POST" action="/shop/{{.ID}}/buy" style="display: inline;">
@@ -177,6 +197,12 @@
                             </div>
                             <div class="form-group">
                                 <input type="number" name="cost" value="{{.Cost}}" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="is_one_time" {{if .IsOneTime}}checked{{end}}>
+                                    <span>One-time item (remove after purchase)</span>
+                                </label>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-sm btn-primary">Save</button>
@@ -362,6 +388,32 @@ function decrementQty(btn) {
 
 .shop-item-header h4 {
     flex: 1;
+}
+
+.shop-item-badge {
+    margin-top: 8px;
+}
+
+.badge-one-time {
+    background: #9c27b0;
+    color: white;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-label span {
+    font-size: 14px;
 }
 </style>
 {{end}}

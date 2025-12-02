@@ -1,0 +1,76 @@
+{{define "title"}}Purchase Log - {{.Group.Name}}{{end}}
+
+{{define "content"}}
+<div class="page-header">
+    <div>
+        <h2>🛒 Purchase Log</h2>
+        <p class="tagline">{{.Group.Name}}</p>
+    </div>
+</div>
+
+{{if .Log}}
+    <div class="card">
+        <div class="card-header">
+            <h3>Purchase History</h3>
+        </div>
+        {{range .Log}}
+            <div class="history-item">
+                <div class="history-header">
+                    <div>
+                        <strong>{{.ItemTitle}}</strong>
+                        <span class="badge badge-reward">🪙 -{{.CoinsSpent}}</span>
+                        {{if .FulfilledAt}}
+                            <span class="badge badge-fulfilled">✓ Fulfilled</span>
+                        {{else}}
+                            <span class="badge badge-pending">⏳ Pending</span>
+                        {{end}}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="text-muted">{{.Purchase.CreatedAt.Format "Jan 2, 15:04"}}</span>
+                        <form method="post" action="/transactions/{{.Purchase.TransactionID}}/undo" style="display: inline;">
+                            <input type="hidden" name="group_id" value="{{$.Group.ID}}">
+                            <button type="submit" class="btn btn-sm btn-outline" title="Undo this purchase">
+                                ↺ Undo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {{if .ItemDescription}}
+                    <p class="text-muted" style="margin-top: 0.5rem;">{{.ItemDescription}}</p>
+                {{end}}
+                {{if .FulfilledAt}}
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                        <p class="text-muted" style="margin: 0;">
+                            <strong>Fulfilled:</strong> {{.FulfilledAt.Format "Jan 2, 15:04"}} by {{.FulfilledBy}}
+                        </p>
+                        {{if .FulfillmentNotes}}
+                            <p class="text-muted" style="margin: 0.25rem 0 0 0;">
+                                <strong>Notes:</strong> {{.FulfillmentNotes}}
+                            </p>
+                        {{end}}
+                    </div>
+                {{else}}
+                    <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                        <form method="post" action="/purchases/{{.PurchaseID}}/fulfill">
+                            <input type="hidden" name="group_id" value="{{$.Group.ID}}">
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label for="notes-{{.PurchaseID}}" style="font-size: var(--font-size-small);">Fulfillment Notes (optional):</label>
+                                <input type="text" id="notes-{{.PurchaseID}}" name="notes" placeholder="How was this fulfilled?" class="quantity-input" style="width: 100%; max-width: 400px;">
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-success">✓ Mark as Fulfilled</button>
+                        </form>
+                    </div>
+                {{end}}
+            </div>
+        {{end}}
+    </div>
+{{else}}
+    <div class="empty-state">
+        No purchases yet. Start buying rewards from the shop!
+    </div>
+{{end}}
+
+<div class="back-link">
+    <a href="/groups/{{.Group.ID}}" class="btn btn-secondary">← Back to Group</a>
+</div>
+{{end}}

@@ -1,0 +1,51 @@
+{{define "title"}}Task Log - {{.Group.Name}}{{end}}
+
+{{define "content"}}
+<div class="page-header">
+    <div>
+        <h2>📜 Task Log</h2>
+        <p class="tagline">{{.Group.Name}}</p>
+    </div>
+</div>
+
+{{if .Log}}
+    <div class="card">
+        <div class="card-header">
+            <h3>Completed Tasks</h3>
+        </div>
+        {{range .Log}}
+            <div class="history-item">
+                <div class="history-header">
+                    <div>
+                        <strong>{{.Task.Title}}</strong>
+                        {{if gt .Transaction.Quantity 1}}
+                            <span class="badge badge-type">×{{.Transaction.Quantity}}</span>
+                        {{end}}
+                        <span class="badge badge-reward">🪙 +{{.Transaction.Amount}}</span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span class="text-muted">{{.Transaction.CreatedAt.Format "Jan 2, 15:04"}}</span>
+                        <form method="post" action="/transactions/{{.Transaction.ID}}/undo" style="display: inline;">
+                            <input type="hidden" name="group_id" value="{{$.Group.ID}}">
+                            <button type="submit" class="btn btn-sm btn-outline" title="Undo this task completion">
+                                ↺ Undo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {{if .Task.Description}}
+                    <p class="text-muted" style="margin-top: 0.5rem;">{{.Task.Description}}</p>
+                {{end}}
+            </div>
+        {{end}}
+    </div>
+{{else}}
+    <div class="empty-state">
+        No tasks completed yet. Start completing tasks to build your log!
+    </div>
+{{end}}
+
+<div class="back-link">
+    <a href="/groups/{{.Group.ID}}" class="btn btn-secondary">← Back to Group</a>
+</div>
+{{end}}

@@ -101,7 +101,7 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 			task.id, task.group_id, task.title, task.description, task.task_type, task.reward_value, task.created_at,
 			u.id, u.telegram_id, u.username, u.created_at
 		FROM transactions t
-		JOIN tasks task ON t.source_id = task.id
+		LEFT JOIN tasks task ON t.source_id = task.id
 		JOIN users u ON t.user_id = u.id
 		WHERE t.user_id = ? AND t.group_id = ? AND t.source_type = 'task'
 		ORDER BY t.created_at DESC
@@ -122,14 +122,22 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 
 		var sourceType string
 		var sourceID sql.NullInt64
-		var taskType string
+		var taskType sql.NullString
 		var telegramID sql.NullInt64
+
+		// All task fields are now nullable since LEFT JOIN may not find the task
+		var taskID sql.NullInt64
+		var taskGroupID sql.NullInt64
+		var taskTitle sql.NullString
+		var taskDescription sql.NullString
+		var taskRewardValue sql.NullInt64
+		var taskCreatedAt sql.NullTime
 
 		if err := rows.Scan(
 			&tch.Transaction.ID, &tch.Transaction.UserID, &tch.Transaction.GroupID,
 			&tch.Transaction.Amount, &sourceType, &sourceID, &tch.Transaction.Quantity, &tch.Transaction.CreatedAt,
-			&tch.Task.ID, &tch.Task.GroupID, &tch.Task.Title, &tch.Task.Description,
-			&taskType, &tch.Task.RewardValue, &tch.Task.CreatedAt,
+			&taskID, &taskGroupID, &taskTitle, &taskDescription,
+			&taskType, &taskRewardValue, &taskCreatedAt,
 			&tch.User.ID, &telegramID, &tch.User.Username, &tch.User.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task completion history: %w", err)
@@ -139,7 +147,24 @@ func (s *Store) GetTaskCompletionHistory(userID, groupID int64) ([]*core.TaskCom
 		if sourceID.Valid {
 			tch.Transaction.SourceID = &sourceID.Int64
 		}
-		tch.Task.TaskType = core.TaskType(taskType)
+
+		// Populate task fields if task still exists
+		if taskID.Valid {
+			tch.Task.ID = taskID.Int64
+			tch.Task.GroupID = taskGroupID.Int64
+			tch.Task.Title = taskTitle.String
+			tch.Task.Description = taskDescription.String
+			tch.Task.RewardValue = int(taskRewardValue.Int64)
+			tch.Task.CreatedAt = taskCreatedAt.Time
+			if taskType.Valid {
+				tch.Task.TaskType = core.TaskType(taskType.String)
+			}
+		} else {
+			// Task was deleted, use placeholder values
+			tch.Task.Title = "[Deleted Task]"
+			tch.Task.Description = "This task has been deleted"
+		}
+
 		if telegramID.Valid {
 			tch.User.TelegramID = &telegramID.Int64
 		}
