@@ -57,109 +57,73 @@
         </div>
     </div>
 
-    <div class="card edu-section collapsed">
-        <button class="edu-main-toggle" onclick="toggleMainSection(this)">
-            <span class="toggle-icon">🔮</span>
-            <span class="toggle-text">How the Burrow Works</span>
-            <span class="toggle-hint">(click to expand)</span>
-            <span class="toggle-arrow">▼</span>
-        </button>
-        
-        <div class="edu-content">
-            <div class="edu-flow-container">
-                <div class="collapsible-step-card">
-                    <button class="step-toggle" onclick="toggleStep(this)">
-                        <div class="step-toggle-header">
-                            <div class="edu-icon-large">🧭</div>
-                            <span class="step-title">Create Quest</span>
-                            <span class="step-arrow">▼</span>
-                        </div>
-                    </button>
-                    <div class="step-content">
-                        <p>Small actions—pick one-and-done or countable progress. Start with something that feels manageable and build momentum.</p>
-                    </div>
+    <div class="card edu-section">
+        <div class="edu-header">
+            <div>
+                <p class="eyebrow">Cozy Loop</p>
+                <h3>How the Burrow Works</h3>
+                <p class="text-muted">A visual map so you know where to start.</p>
+            </div>
+            <div class="edu-chip">Soft focus · No overwhelm</div>
+        </div>
+
+        <div class="edu-journey">
+            <div class="journey-step">
+                <div class="journey-icon">🧭</div>
+                <div class="journey-body">
+                    <h4>Create Quest</h4>
+                    <p class="text-muted">Pick one-time or countable, keep it tiny.</p>
                 </div>
-                
-                <div class="flow-arrow-between">→</div>
-                
-                <div class="collapsible-step-card">
-                    <button class="step-toggle" onclick="toggleStep(this)">
-                        <div class="step-toggle-header">
-                            <div class="edu-icon-large">✅</div>
-                            <span class="step-title">Complete Quest</span>
-                            <span class="step-arrow">▼</span>
-                        </div>
-                    </button>
-                    <div class="step-content">
-                        <p>Mark your quest as complete when you finish it. Every completion counts and builds your progress!</p>
-                    </div>
+            </div>
+            <div class="journey-arrow">→</div>
+            <div class="journey-step">
+                <div class="journey-icon">✅</div>
+                <div class="journey-body">
+                    <h4>Complete</h4>
+                    <p class="text-muted">Tap finish, log the win.</p>
                 </div>
-                
-                <div class="flow-arrow-between">→</div>
-                
-                <div class="collapsible-step-card">
-                    <button class="step-toggle" onclick="toggleStep(this)">
-                        <div class="step-toggle-header">
-                            <div class="edu-icon-large">🧀</div>
-                            <span class="step-title">Earn Coins</span>
-                            <span class="step-arrow">▼</span>
-                        </div>
-                    </button>
-                    <div class="step-content">
-                        <p>Get cheese coins for your effort. The reward system stays gentle—it's about progress, not perfection.</p>
-                    </div>
+            </div>
+            <div class="journey-arrow">→</div>
+            <div class="journey-step">
+                <div class="journey-icon">🧀</div>
+                <div class="journey-body">
+                    <h4>Earn Cheese</h4>
+                    <p class="text-muted">Cheese rises with effort, not perfection.</p>
                 </div>
-                
-                <div class="flow-arrow-between">→</div>
-                
-                <div class="collapsible-step-card">
-                    <button class="step-toggle" onclick="toggleStep(this)">
-                        <div class="step-toggle-header">
-                            <div class="edu-icon-large">🛍️</div>
-                            <span class="step-title">Buy Rewards</span>
-                            <span class="step-arrow">▼</span>
-                        </div>
-                    </button>
-                    <div class="step-content">
-                        <p>Swap your coins for treats you choose. Create rewards that motivate you and celebrate your wins!</p>
-                    </div>
+            </div>
+            <div class="journey-arrow">→</div>
+            <div class="journey-step">
+                <div class="journey-icon">🛍️</div>
+                <div class="journey-body">
+                    <h4>Buy Rewards</h4>
+                    <p class="text-muted">Trade cheese for treats you chose.</p>
                 </div>
+            </div>
+        </div>
+
+        <div class="edu-grid">
+            <div class="edu-card">
+                <div class="edu-icon">✨</div>
+                <h4>What is RatPG?</h4>
+                <p>A soft, dark burrow for quests. Zero neon, zero noise.</p>
+            </div>
+            <div class="edu-card">
+                <div class="edu-icon">🎯</div>
+                <h4>Quests</h4>
+                <p>Clear labels; either one-time or countable. No clutter.</p>
+            </div>
+            <div class="edu-card">
+                <div class="edu-icon">🫂</div>
+                <h4>Party</h4>
+                <p>Invite partners with your code. Shared quests, shared wins.</p>
+            </div>
+            <div class="edu-card">
+                <div class="edu-icon">📨</div>
+                <h4>Invite Flow</h4>
+                <p>Drop the code, they land directly in your group.</p>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function toggleMainSection(button) {
-    const section = button.closest('.edu-section');
-    const content = section.querySelector('.edu-content');
-    const arrow = button.querySelector('.toggle-arrow');
-    const hint = button.querySelector('.toggle-hint');
-    
-    section.classList.toggle('collapsed');
-    
-    if (section.classList.contains('collapsed')) {
-        arrow.textContent = '▼';
-        hint.textContent = '(click to expand)';
-    } else {
-        arrow.textContent = '▲';
-        hint.textContent = '(click to collapse)';
-    }
-}
-
-function toggleStep(button) {
-    const card = button.closest('.collapsible-step-card');
-    const content = card.querySelector('.step-content');
-    const arrow = button.querySelector('.step-arrow');
-    
-    card.classList.toggle('expanded');
-    
-    if (card.classList.contains('expanded')) {
-        arrow.textContent = '▲';
-    } else {
-        arrow.textContent = '▼';
-    }
-}
-</script>
 </div>
 {{end}}
