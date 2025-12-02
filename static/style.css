@@ -1492,6 +1492,33 @@ code {
     min-height: 140px;
 }
 
+.deep-explain {
+    margin-top: 1rem;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.015), rgba(94, 232, 233, 0.025));
+    border: 1px solid var(--border-color);
+}
+
+.deep-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.85rem;
+}
+
+.deep-block {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    display: grid;
+    gap: 0.4rem;
+}
+
+.deep-block h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .page-header {
