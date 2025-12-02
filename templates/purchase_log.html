@@ -17,9 +17,9 @@
             <div class="history-item">
                 <div class="history-header">
                     <div>
-                        <strong>{{.ItemTitle}}</strong>
-                        <span class="badge badge-reward">🪙 -{{.CoinsSpent}}</span>
-                        {{if .FulfilledAt}}
+                        <strong>{{.ShopItem.Title}}</strong>
+                        <span class="badge badge-reward">🪙 -{{.ShopItem.Cost}}</span>
+                        {{if .Purchase.FulfilledAt}}
                             <span class="badge badge-fulfilled">✓ Fulfilled</span>
                         {{else}}
                             <span class="badge badge-pending">⏳ Pending</span>
@@ -35,27 +35,27 @@
                         </form>
                     </div>
                 </div>
-                {{if .ItemDescription}}
-                    <p class="text-muted" style="margin-top: 0.5rem;">{{.ItemDescription}}</p>
+                {{if .ShopItem.Description}}
+                    <p class="text-muted" style="margin-top: 0.5rem;">{{.ShopItem.Description}}</p>
                 {{end}}
-                {{if .FulfilledAt}}
+                {{if .Purchase.FulfilledAt}}
                     <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
                         <p class="text-muted" style="margin: 0;">
-                            <strong>Fulfilled:</strong> {{.FulfilledAt.Format "Jan 2, 15:04"}} by {{.FulfilledBy}}
+                            <strong>Fulfilled:</strong> {{.Purchase.FulfilledAt.Format "Jan 2, 15:04"}}
                         </p>
-                        {{if .FulfillmentNotes}}
+                        {{if .Purchase.Notes}}
                             <p class="text-muted" style="margin: 0.25rem 0 0 0;">
-                                <strong>Notes:</strong> {{.FulfillmentNotes}}
+                                <strong>Notes:</strong> {{.Purchase.Notes}}
                             </p>
                         {{end}}
                     </div>
                 {{else}}
                     <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
-                        <form method="post" action="/purchases/{{.PurchaseID}}/fulfill">
+                        <form method="post" action="/purchases/{{.Purchase.ID}}/fulfill">
                             <input type="hidden" name="group_id" value="{{$.Group.ID}}">
                             <div class="form-group" style="margin-bottom: 0.5rem;">
-                                <label for="notes-{{.PurchaseID}}" style="font-size: var(--font-size-small);">Fulfillment Notes (optional):</label>
-                                <input type="text" id="notes-{{.PurchaseID}}" name="notes" placeholder="How was this fulfilled?" class="quantity-input" style="width: 100%; max-width: 400px;">
+                                <label for="notes-{{.Purchase.ID}}" style="font-size: var(--font-size-small);">Fulfillment Notes (optional):</label>
+                                <input type="text" id="notes-{{.Purchase.ID}}" name="notes" placeholder="How was this fulfilled?" class="quantity-input" style="width: 100%; max-width: 400px;">
                             </div>
                             <button type="submit" class="btn btn-sm btn-success">✓ Mark as Fulfilled</button>
                         </form>

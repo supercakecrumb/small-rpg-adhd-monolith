@@ -279,9 +279,9 @@ function decrementQty(btn) {
 
 .quick-link {
     padding: 8px 16px;
-    background: var(--card-bg);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(94, 232, 233, 0.04));
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     text-decoration: none;
     color: var(--text-primary);
     font-size: 14px;
@@ -289,8 +289,9 @@ function decrementQty(btn) {
 }
 
 .quick-link:hover {
-    background: var(--bg-secondary);
-    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(94, 232, 233, 0.08), rgba(246, 193, 119, 0.06));
+    border-color: var(--accent-primary);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
 }
 
 .task-badges {
@@ -341,18 +342,18 @@ function decrementQty(btn) {
     display: flex;
     align-items: center;
     gap: 4px;
-    background: var(--input-bg);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 2px;
 }
 
 .stepper-btn {
-    background: var(--bg-secondary);
-    border: none;
+    background: rgba(94, 232, 233, 0.08);
+    border: 1px solid rgba(94, 232, 233, 0.2);
     width: 28px;
     height: 28px;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 18px;
     line-height: 1;
@@ -361,8 +362,9 @@ function decrementQty(btn) {
 }
 
 .stepper-btn:hover {
-    background: var(--primary-color);
-    color: white;
+    background: rgba(94, 232, 233, 0.2);
+    border-color: var(--accent-primary);
+    color: #031014;
 }
 
 .quantity-stepper input {
@@ -395,8 +397,8 @@ function decrementQty(btn) {
 }
 
 .badge-one-time {
-    background: #9c27b0;
-    color: white;
+    background: linear-gradient(135deg, var(--accent-tertiary), var(--accent-secondary));
+    color: #0c0b11;
 }
 
 .checkbox-label {

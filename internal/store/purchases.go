@@ -108,7 +108,7 @@ func (s *Store) GetPurchasesByUserAndGroup(userID, groupID int64) ([]*core.Purch
 func (s *Store) GetPurchasesByGroupID(groupID int64) ([]*core.Purchase, error) {
 	query := `
 		SELECT id, transaction_id, user_id, group_id, shop_item_id,
-		       fulfilled, fulfilled_at, fulfilled_by, notes, created_at
+		       fulfilled, fulfilled_at, fulfilled_by, COALESCE(notes, '') as notes, created_at
 		FROM purchases
 		WHERE group_id = ?
 		ORDER BY created_at DESC
@@ -191,9 +191,9 @@ func (s *Store) CancelPurchaseByTransactionID(transactionID int64) error {
 // GetPurchaseHistoryByUserAndGroup retrieves detailed purchase history
 func (s *Store) GetPurchaseHistoryByUserAndGroup(userID, groupID int64) ([]*core.PurchaseHistory, error) {
 	query := `
-		SELECT 
+		SELECT
 			p.id, p.transaction_id, p.user_id, p.group_id, p.shop_item_id,
-			p.fulfilled, p.fulfilled_at, p.fulfilled_by, p.notes, p.created_at,
+			p.fulfilled, p.fulfilled_at, p.fulfilled_by, COALESCE(p.notes, '') as notes, p.created_at,
 			si.id, si.group_id, si.title, si.description, si.cost, si.created_at,
 			u.id, u.telegram_id, u.username, u.created_at
 		FROM purchases p
