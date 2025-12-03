@@ -1,0 +1,116 @@
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .nav-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .task-item {
+        flex-direction: column;
+        align-items: flex-start;
+        break-inside: avoid;
+    }
+
+    .tasks-list {
+        column-width: 100%;
+    }
+
+    .group-topbar {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .group-topbar-center {
+        justify-content: flex-start;
+    }
+
+    .group-topbar-right {
+        justify-content: flex-start;
+    }
+
+    .edu-flow-container {
+        gap: 0.75rem;
+    }
+
+    .flow-arrow-between {
+        transform: rotate(90deg);
+        padding: 0.25rem 0;
+    }
+
+    .step-toggle-header {
+        flex-wrap: wrap;
+    }
+
+    .edu-icon-large {
+        width: 32px;
+        height: 32px;
+        font-size: 1.1rem;
+    }
+
+    .step-title {
+        font-size: 0.95rem;
+    }
+
+    .info-tooltip {
+        white-space: normal;
+        max-width: 200px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 1024px) {
+    .navbar .container {
+        flex-wrap: wrap;
+        gap: 0.75rem 1rem;
+        align-items: flex-start;
+    }
+
+    .nav-links {
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .group-topbar {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 1100px) {
+    .edu-journey {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .edu-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .deep-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .edu-journey {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    .edu-grid {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+    .deep-row {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+}

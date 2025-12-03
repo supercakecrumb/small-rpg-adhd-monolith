@@ -1,0 +1,22 @@
+/* Alert Components */
+
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid;
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.alert-error {
+    color: #ffb4b4;
+    border-color: rgba(255, 107, 107, 0.4);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.12), rgba(255, 107, 107, 0.04));
+}
+
+.alert-success {
+    color: #b4ffe3;
+    border-color: rgba(58, 210, 159, 0.35);
+    background: linear-gradient(135deg, rgba(58, 210, 159, 0.16), rgba(58, 210, 159, 0.06));
+}

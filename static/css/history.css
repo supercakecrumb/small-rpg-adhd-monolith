@@ -1,0 +1,56 @@
+/* History pages */
+.history-item {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(94, 232, 233, 0.03));
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+    break-inside: avoid;
+}
+
+.history-item:hover {
+    border-color: var(--border-hover);
+    background: linear-gradient(135deg, rgba(94, 232, 233, 0.05), rgba(255, 255, 255, 0.02));
+}
+
+.row-highlight {
+    animation: rowGlow 0.6s ease;
+}
+
+.pulse-success {
+    animation: btnPulseSuccess 0.5s ease;
+}
+
+.pulse-buy {
+    animation: btnPulseBuy 0.5s ease;
+}
+
+@keyframes rowGlow {
+    from { box-shadow: 0 0 0 rgba(58, 210, 159, 0.2); }
+    to { box-shadow: 0 0 30px rgba(58, 210, 159, 0.18); }
+}
+
+@keyframes btnPulseSuccess {
+    0% { box-shadow: 0 0 0 rgba(58, 210, 159, 0.35); transform: scale(1); }
+    50% { box-shadow: 0 0 25px rgba(58, 210, 159, 0.4); transform: scale(1.02); }
+    100% { box-shadow: 0 0 0 rgba(58, 210, 159, 0.2); transform: scale(1); }
+}
+
+@keyframes btnPulseBuy {
+    0% { box-shadow: 0 0 0 rgba(94, 232, 233, 0.35); transform: scale(1); }
+    50% { box-shadow: 0 0 25px rgba(94, 232, 233, 0.4); transform: scale(1.02); }
+    100% { box-shadow: 0 0 0 rgba(94, 232, 233, 0.2); transform: scale(1); }
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.history-meta {
+    font-size: var(--font-size-small);
+    color: var(--text-muted);
+}

@@ -1,0 +1,41 @@
+/* Utility Classes - Empty States, Back Links, Code */
+
+.text-muted {
+    color: var(--text-muted);
+    font-size: var(--font-size-small);
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 3rem 1rem;
+    font-style: italic;
+    font-size: var(--font-size-body);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(94, 232, 233, 0.03));
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.empty-state::before {
+    content: '✨';
+    display: block;
+    font-size: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.back-link {
+    margin-top: var(--spacing-section);
+    display: flex;
+    justify-content: flex-start;
+}
+
+code {
+    background-color: var(--bg-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Monaco', monospace;
+    font-size: 13px;
+    color: var(--accent-primary);
+    border: 1px solid var(--border-color);
+}

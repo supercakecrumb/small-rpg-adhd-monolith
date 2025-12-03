@@ -1,0 +1,40 @@
+/* Main CSS - Imports all modular stylesheets */
+
+/* Base styles - Variables, reset, and foundational styles */
+@import url('base.css');
+
+/* Layout - Structure and containers */
+@import url('layout.css');
+
+/* Typography - Text and heading styles */
+@import url('typography.css');
+
+/* Components - Reusable UI components */
+@import url('cards.css');
+@import url('forms.css');
+@import url('buttons.css');
+@import url('alerts.css');
+
+/* Page-specific modules */
+@import url('dashboard.css');
+@import url('tasks.css');
+@import url('shop.css');
+@import url('members.css');
+@import url('badges.css');
+
+/* Utilities and helpers */
+@import url('utilities.css');
+
+/* Specialized page styles */
+@import url('history.css');
+@import url('tooltips.css');
+@import url('educational.css');
+
+/* Quest-specific components */
+@import url('quest-components.css');
+
+/* Animations */
+@import url('animations.css');
+
+/* Responsive - Media queries (must be last) */
+@import url('responsive.css');

@@ -1,0 +1,47 @@
+/* Member List Styles */
+
+.members-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+}
+
+.member-item {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(94, 232, 233, 0.03));
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.member-item:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.member-identity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.member-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.member-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.member-role {
+    font-size: 12px;
+    color: var(--accent-secondary);
+    letter-spacing: 0.01em;
+}

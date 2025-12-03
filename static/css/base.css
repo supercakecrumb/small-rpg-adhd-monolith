@@ -1,0 +1,82 @@
+/* Base Styles - CSS Variables, Reset, and Body */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Dark, cinematic palette */
+    --bg-primary: #05070f;
+    --bg-secondary: #0b1220;
+    --surface: #0f1829;
+    --surface-elevated: #16233b;
+    
+    --text-primary: #eaf1ff;
+    --text-secondary: #a5b4d4;
+    --text-muted: #7f8bad;
+    
+    /* Accents */
+    --primary-color: #5ee8e9;
+    --primary-hover: #36d3d4;
+    --primary-dark: #1fb7c0;
+    --accent-primary: #5ee8e9;
+    --accent-primary-hover: #7bf3f2;
+    --accent-secondary: #f6c177;
+    --accent-tertiary: #ff8fab;
+    
+    /* Status */
+    --success: #3ad29f;
+    --success-hover: #2cbc8c;
+    --error: #ff6b6b;
+    --error-hover: #f25555;
+    
+    /* Borders */
+    --border-color: #1c2942;
+    --border: #1b2338;
+    --border-hover: #263656;
+    --border-focus: #7bf3f2;
+    
+    /* Shadows */
+    --shadow-sm: rgba(0, 0, 0, 0.25);
+    --shadow-md: rgba(0, 0, 0, 0.4);
+    --shadow-lg: rgba(0, 0, 0, 0.65);
+    --glow: 0 15px 50px rgba(94, 232, 233, 0.18);
+    
+    /* Spacing */
+    --spacing-section: 32px;
+    --spacing-card: 24px;
+    
+    /* Border radius */
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    
+    /* Typography */
+    --font-size-h1: 28px;
+    --font-size-h2: 20px;
+    --font-size-h3: 18px;
+    --font-size-body: 15px;
+    --font-size-small: 14px;
+    
+    /* Input background */
+    --input-bg: rgba(255, 255, 255, 0.03);
+    --card-bg: var(--surface);
+}
+
+body {
+    font-family: 'Space Grotesk', 'Segoe UI', 'Helvetica Neue', Arial, Courier, sans-serif;
+    background: radial-gradient(circle at 10% 20%, rgba(94, 232, 233, 0.08), transparent 25%),
+                radial-gradient(circle at 80% 0%, rgba(246, 193, 119, 0.07), transparent 22%),
+                linear-gradient(180deg, #05070f 0%, #060814 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: var(--font-size-body);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    letter-spacing: 0.01em;
+}

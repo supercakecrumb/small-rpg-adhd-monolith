@@ -1,0 +1,147 @@
+/* Form Styles - All form-related styles including inputs, textareas, selects */
+
+/* Auth pages */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.auth-card {
+    background-color: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 12px var(--shadow-md);
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid var(--border);
+}
+
+.auth-card h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--accent-primary);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.auth-footer a {
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.auth-footer a:hover {
+    color: var(--accent-primary-hover);
+    text-decoration: underline;
+}
+
+/* Forms */
+.form {
+    width: 100%;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    background-color: rgba(94, 232, 233, 0.04);
+    box-shadow: 0 0 0 3px rgba(94, 232, 233, 0.12);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.compact-row {
+    align-items: flex-end;
+}
+
+.pill-input {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.03);
+    max-width: 250px;
+    min-width: 0;
+}
+
+.pill-input input {
+    border: none;
+    background: transparent;
+    padding: 0.4rem 0.35rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.pill-input-icon {
+    font-size: 0.95rem;
+    opacity: 0.85;
+}
+
+.form-section {
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+}
+
+input[type=number] {
+    width: 80px;
+    padding: 0.5rem;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    text-align: center;
+    background-color: var(--surface-elevated);
+    color: var(--text-primary);
+    -webkit-appearance: none; /* correct */
+    -moz-appearance: textfield; /* for Firefox */
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
