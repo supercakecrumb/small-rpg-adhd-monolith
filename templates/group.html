@@ -610,5 +610,205 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!balanceAmount) return;
     balanceAmount.classList.add('no-animation');
 })();
+
+// Undo functionality
+(function() {
+    // Create toast container if it doesn't exist
+    function getToastContainer() {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+        return container;
+    }
+
+    // Show toast notification
+    function showToast(message, onUndo, itemType, itemId) {
+        const container = getToastContainer();
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <div class="toast-message">${message}</div>
+            <div class="toast-actions">
+                <button class="toast-btn toast-btn-undo" data-action="undo">Undo</button>
+                <button class="toast-btn toast-btn-dismiss" data-action="dismiss">Dismiss</button>
+            </div>
+        `;
+
+        // Handle undo button click
+        const undoBtn = toast.querySelector('[data-action="undo"]');
+        undoBtn.addEventListener('click', function() {
+            onUndo(itemType, itemId, toast);
+        });
+
+        // Handle dismiss button click
+        const dismissBtn = toast.querySelector('[data-action="dismiss"]');
+        dismissBtn.addEventListener('click', function() {
+            hideToast(toast);
+        });
+
+        container.appendChild(toast);
+
+        // Auto-dismiss after 30 seconds (matching backend TTL concept)
+        setTimeout(function() {
+            if (toast.parentElement) {
+                hideToast(toast);
+            }
+        }, 30000);
+
+        return toast;
+    }
+
+    // Hide toast with animation
+    function hideToast(toast) {
+        toast.classList.add('toast-hiding');
+        setTimeout(function() {
+            if (toast.parentElement) {
+                toast.parentElement.removeChild(toast);
+            }
+        }, 300);
+    }
+
+    // Handle undo action
+    function handleUndo(itemType, itemId, toast) {
+        const undoBtn = toast.querySelector('[data-action="undo"]');
+        undoBtn.disabled = true;
+        undoBtn.textContent = 'Undoing...';
+
+        const endpoint = itemType === 'task'
+            ? `/tasks/${itemId}/undo`
+            : `/shop/${itemId}/undo`;
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Success - reload page to show restored item
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    throw new Error(text || 'Failed to undo deletion');
+                });
+            }
+        })
+        .catch(error => {
+            undoBtn.disabled = false;
+            undoBtn.textContent = 'Undo';
+            alert('Failed to undo: ' + error.message);
+        });
+    }
+
+    // Intercept task delete forms
+    document.querySelectorAll('form[action^="/tasks/"][action$="/delete"]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Delete this quest?')) {
+                e.preventDefault();
+                return;
+            }
+            
+            e.preventDefault();
+            
+            const taskId = form.action.match(/\/tasks\/(\d+)\/delete/)[1];
+            const taskItem = form.closest('.task-item');
+            const taskTitle = taskItem ? taskItem.querySelector('h4').textContent : 'Quest';
+
+            // Submit the form via fetch
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Remove the task from UI
+                    if (taskItem) {
+                        taskItem.style.opacity = '0';
+                        setTimeout(function() {
+                            taskItem.remove();
+                            // Check if tasks list is now empty
+                            const tasksList = document.querySelector('.tasks-list');
+                            if (tasksList && tasksList.children.length === 0) {
+                                tasksList.innerHTML = '<p class="empty-state">No quests yet. Add one to get started!</p>';
+                            }
+                        }, 300);
+                    }
+                    
+                    // Show undo toast
+                    showToast(
+                        `Quest "${taskTitle}" deleted.`,
+                        handleUndo,
+                        'task',
+                        taskId
+                    );
+                } else {
+                    alert('Failed to delete quest');
+                }
+            })
+            .catch(error => {
+                alert('Error deleting quest: ' + error.message);
+            });
+        });
+    });
+
+    // Intercept shop item delete forms
+    document.querySelectorAll('form[action^="/shop/"][action$="/delete"]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Delete this item?')) {
+                e.preventDefault();
+                return;
+            }
+            
+            e.preventDefault();
+            
+            const itemId = form.action.match(/\/shop\/(\d+)\/delete/)[1];
+            const shopItem = form.closest('.shop-item');
+            const itemTitle = shopItem ? shopItem.querySelector('h4').textContent : 'Item';
+
+            // Submit the form via fetch
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Remove the item from UI
+                    if (shopItem) {
+                        shopItem.style.opacity = '0';
+                        setTimeout(function() {
+                            shopItem.remove();
+                            // Check if shop grid is now empty
+                            const shopGrid = document.querySelector('.shop-grid');
+                            if (shopGrid && shopGrid.children.length === 0) {
+                                shopGrid.parentElement.innerHTML = '<p class="empty-state">No items in the market yet. Add some rewards!</p>';
+                            }
+                        }, 300);
+                    }
+                    
+                    // Show undo toast
+                    showToast(
+                        `Item "${itemTitle}" deleted.`,
+                        handleUndo,
+                        'shop',
+                        itemId
+                    );
+                } else {
+                    alert('Failed to delete item');
+                }
+            })
+            .catch(error => {
+                alert('Error deleting item: ' + error.message);
+            });
+        });
+    });
+})();
 </script>
 {{end}}

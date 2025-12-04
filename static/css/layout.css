@@ -151,6 +151,35 @@ main {
     padding-bottom: 2rem;
 }
 
+/* Main content */
+main {
+    flex: 1;
+    padding-bottom: 2rem;
+}
+
+/* Mobile Menu Toggle - Hidden by default */
+.mobile-menu-toggle {
+    display: none;
+}
+
+/* Mobile Menu - Hidden by default */
+.mobile-menu,
+.mobile-menu-overlay {
+    display: none;
+}
+
+/* Show mobile menu elements on mobile via media query */
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .mobile-menu,
+    .mobile-menu-overlay {
+        display: block;
+    }
+}
+
 /* Footer */
 footer {
     background-color: var(--surface);

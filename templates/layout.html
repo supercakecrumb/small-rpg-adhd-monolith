@@ -58,8 +58,47 @@
                 </a>
                 {{end}}
             </div>
+            {{if .Username}}
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Menu">
+                <span class="hamburger-icon">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </button>
+            {{end}}
         </div>
     </nav>
+
+    {{if .Username}}
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="toggleMobileMenu()"></div>
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <h3>Menu</h3>
+            <button class="mobile-menu-close" onclick="toggleMobileMenu()" aria-label="Close menu">&times;</button>
+        </div>
+        <div class="mobile-menu-content">
+            <div class="mobile-menu-profile">
+                <span class="avatar-emoji" data-username="{{.Username}}"></span>
+                <span class="mobile-menu-username">{{.Username}}</span>
+            </div>
+            <div class="mobile-menu-links">
+                <a href="/dashboard" class="mobile-menu-link">
+                    <span class="mobile-menu-icon">🏠</span>
+                    <span>{{t .Locale "nav.dashboard"}}</span>
+                </a>
+                <a href="/locale?lang={{if eq .Locale "ru"}}en{{else}}ru{{end}}" class="mobile-menu-link">
+                    <span class="mobile-menu-icon">🌐</span>
+                    <span>{{if eq .Locale "ru"}}Switch to English{{else}}Переключить на русский{{end}}</span>
+                </a>
+                <a href="/logout" class="mobile-menu-link mobile-menu-logout">
+                    <span class="mobile-menu-icon">🚪</span>
+                    <span>{{t .Locale "nav.logout"}}</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    {{end}}
 
     <main class="container">
         {{template "content" .}}
@@ -217,6 +256,23 @@
             formatCheese,
         };
     })();
+
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobileMenu');
+        const overlay = document.getElementById('mobileMenuOverlay');
+        const isOpen = menu.classList.contains('open');
+        
+        if (isOpen) {
+            menu.classList.remove('open');
+            overlay.classList.remove('open');
+            document.body.style.overflow = '';
+        } else {
+            menu.classList.add('open');
+            overlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    }
     </script>
 </body>
 </html>

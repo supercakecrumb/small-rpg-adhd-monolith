@@ -33,6 +33,7 @@ type Store interface {
 	GetTasksByGroupID(groupID int64) ([]*Task, error)
 	UpdateTask(id int64, title, description string, taskType TaskType, rewardValue int, defaultQuantity int, isOneTime bool) error
 	DeleteTask(id int64) error
+	UndoTaskDeletion(id int64) (*Task, error)
 
 	// Shop operations
 	CreateShopItem(groupID int64, title, description string, cost int, isOneTime bool) (*ShopItem, error)
@@ -40,6 +41,7 @@ type Store interface {
 	GetShopItemsByGroupID(groupID int64) ([]*ShopItem, error)
 	UpdateShopItem(id int64, title, description string, cost int, isOneTime bool) error
 	DeleteShopItem(id int64) error
+	UndoShopItemDeletion(id int64) (*ShopItem, error)
 
 	// Transaction operations
 	CreateTransaction(userID, groupID int64, amount int, sourceType SourceType, sourceID *int64, quantity int, description, notes string) (*Transaction, error)
@@ -284,6 +286,11 @@ func (s *Service) DeleteTask(id int64) error {
 	return s.store.DeleteTask(id)
 }
 
+// UndoTaskDeletion restores a deleted task from cache
+func (s *Service) UndoTaskDeletion(id int64) (*Task, error) {
+	return s.store.UndoTaskDeletion(id)
+}
+
 // CreateShopItem creates a new shop item in a group
 func (s *Service) CreateShopItem(groupID int64, title, description string, cost int, isOneTime bool) (*ShopItem, error) {
 	if title == "" {
@@ -316,6 +323,11 @@ func (s *Service) UpdateShopItem(id int64, title, description string, cost int, 
 // DeleteShopItem deletes a shop item
 func (s *Service) DeleteShopItem(id int64) error {
 	return s.store.DeleteShopItem(id)
+}
+
+// UndoShopItemDeletion restores a deleted shop item from cache
+func (s *Service) UndoShopItemDeletion(id int64) (*ShopItem, error) {
+	return s.store.UndoShopItemDeletion(id)
 }
 
 // BuyItem handles purchasing an item from the shop

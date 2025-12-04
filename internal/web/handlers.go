@@ -439,7 +439,27 @@ func (s *Server) handleDeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?success=Task deleted", http.StatusSeeOther)
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(task.GroupID, 10)+"?success=Task deleted&deleted_task_id="+taskIDStr, http.StatusSeeOther)
+}
+
+// handleUndoDeleteTask restores a deleted task
+func (s *Server) handleUndoDeleteTask(w http.ResponseWriter, r *http.Request) {
+	taskIDStr := chi.URLParam(r, "taskID")
+	taskID, err := strconv.ParseInt(taskIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
+	}
+
+	task, err := s.service.UndoTaskDeletion(taskID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Task restored: " + task.Title))
 }
 
 // handleUpdateShopItem updates an existing shop item
@@ -510,7 +530,27 @@ func (s *Server) handleDeleteShopItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Shop item deleted", http.StatusSeeOther)
+	http.Redirect(w, r, "/groups/"+strconv.FormatInt(item.GroupID, 10)+"?success=Shop item deleted&deleted_item_id="+itemIDStr, http.StatusSeeOther)
+}
+
+// handleUndoDeleteShopItem restores a deleted shop item
+func (s *Server) handleUndoDeleteShopItem(w http.ResponseWriter, r *http.Request) {
+	itemIDStr := chi.URLParam(r, "itemID")
+	itemID, err := strconv.ParseInt(itemIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid item ID", http.StatusBadRequest)
+		return
+	}
+
+	item, err := s.service.UndoShopItemDeletion(itemID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Shop item restored: " + item.Title))
 }
 
 type taskLogData struct {

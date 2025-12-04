@@ -122,12 +122,14 @@ func (s *Server) Router() http.Handler {
 		r.Post("/tasks/{taskID}/complete", s.handleCompleteTask)
 		r.Post("/tasks/{taskID}/update", s.handleUpdateTask)
 		r.Post("/tasks/{taskID}/delete", s.handleDeleteTask)
+		r.Post("/tasks/{taskID}/undo", s.handleUndoDeleteTask)
 
 		// Shop routes
 		r.Post("/groups/{groupID}/shop/create", s.handleCreateShopItem)
 		r.Post("/shop/{itemID}/buy", s.handleBuyItem)
 		r.Post("/shop/{itemID}/update", s.handleUpdateShopItem)
 		r.Post("/shop/{itemID}/delete", s.handleDeleteShopItem)
+		r.Post("/shop/{itemID}/undo", s.handleUndoDeleteShopItem)
 
 		// History routes
 		r.Get("/groups/{groupID}/tasks/log", s.handleTaskLog)

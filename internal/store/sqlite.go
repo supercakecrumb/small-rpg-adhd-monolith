@@ -9,7 +9,8 @@ import (
 
 // Store wraps the database connection
 type Store struct {
-	DB *sql.DB
+	DB        *sql.DB
+	undoCache *undoCache
 }
 
 // NewStore creates a new Store and initializes the database
@@ -24,7 +25,10 @@ func NewStore(dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	store := &Store{DB: db}
+	store := &Store{
+		DB:        db,
+		undoCache: newUndoCache(),
+	}
 
 	// Run migrations
 	if err := store.migrate(); err != nil {
